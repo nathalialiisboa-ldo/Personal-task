@@ -959,6 +959,10 @@
   $("#metricsSpace").addEventListener("change", () => renderDashboard());
 
   // ---------- Init ----------
+  const topnavDate = $("#topnavDate");
+  if (topnavDate) {
+    topnavDate.textContent = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+  }
   $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
   setBoardMode(boardMode);
 })();

@@ -9,15 +9,30 @@
 <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+<header class="topnav">
+  <div class="topnav-brand">
+    <span class="topnav-logo">✓</span>
+    <div class="topnav-brand-text">
+      <strong>Minhas Tarefas</strong>
+      <small>Painel de produtividade pessoal</small>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <span class="topnav-date-pill" id="topnavDate">—</span>
+    <div class="topnav-user">
+      <div class="topnav-user-text">
+        <strong>Nathalia Lisboa</strong>
+        <small>Minha organização diária</small>
+      </div>
+      <span class="topnav-avatar">N</span>
+    </div>
+  </div>
+</header>
+
 <div class="app">
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <div class="brand">
-      <span class="brand-icon">✅</span>
-      <span class="brand-name">Minhas Tarefas</span>
-    </div>
-
     <button id="btnNewTask" class="btn btn-primary btn-block">+ Nova tarefa</button>
 
     <nav class="nav-views" id="spaceNav">
@@ -74,10 +89,10 @@
           <input type="search" id="searchInput" placeholder="Buscar tarefas..." />
         </div>
         <div class="topbar-stats">
-          <div class="mini-stat"><span id="statTotal">0</span><small>Total</small></div>
-          <div class="mini-stat"><span id="statDone">0</span><small>Concluídas</small></div>
-          <div class="mini-stat"><span id="statRate">0%</span><small>Taxa</small></div>
-          <div class="mini-stat"><span id="statStreak">0</span><small>Sequência 🔥</small></div>
+          <div class="mini-stat accent-purple"><span id="statTotal">0</span><small>Total</small></div>
+          <div class="mini-stat accent-green"><span id="statDone">0</span><small>Concluídas</small></div>
+          <div class="mini-stat accent-blue"><span id="statRate">0%</span><small>Taxa</small></div>
+          <div class="mini-stat accent-orange"><span id="statStreak">0</span><small>Sequência 🔥</small></div>
         </div>
         <select id="sortSelect">
           <option value="createdDesc">Mais recentes</option>
@@ -147,39 +162,39 @@
       </header>
 
       <div class="cards-grid">
-        <div class="stat-card"><div class="stat-value" id="mTotal">0</div><div class="stat-label">Tarefas totais</div></div>
-        <div class="stat-card"><div class="stat-value" id="mDone">0</div><div class="stat-label">Concluídas</div></div>
-        <div class="stat-card"><div class="stat-value" id="mRate">0%</div><div class="stat-label">Taxa de conclusão</div></div>
-        <div class="stat-card"><div class="stat-value" id="mAvgTime">–</div><div class="stat-label">Tempo médio p/ concluir</div></div>
-        <div class="stat-card"><div class="stat-value" id="mStreak">0</div><div class="stat-label">Sequência atual (dias)</div></div>
-        <div class="stat-card"><div class="stat-value" id="mAttachments">0</div><div class="stat-label">Evidências anexadas</div></div>
+        <div class="stat-card accent-purple"><div class="stat-value" id="mTotal">0</div><div class="stat-label">Tarefas totais</div></div>
+        <div class="stat-card accent-green"><div class="stat-value" id="mDone">0</div><div class="stat-label">Concluídas</div></div>
+        <div class="stat-card accent-blue"><div class="stat-value" id="mRate">0%</div><div class="stat-label">Taxa de conclusão</div></div>
+        <div class="stat-card accent-pink"><div class="stat-value" id="mAvgTime">–</div><div class="stat-label">Tempo médio p/ concluir</div></div>
+        <div class="stat-card accent-orange"><div class="stat-value" id="mStreak">0</div><div class="stat-label">Sequência atual (dias)</div></div>
+        <div class="stat-card accent-teal"><div class="stat-value" id="mAttachments">0</div><div class="stat-label">Evidências anexadas</div></div>
       </div>
 
       <div class="charts-grid">
         <div class="chart-card">
-          <h3>Atividade diária</h3>
+          <h3>📈 Atividade diária</h3>
           <canvas id="chartActivity" height="220"></canvas>
         </div>
         <div class="chart-card">
-          <h3>Status das tarefas</h3>
+          <h3>🧭 Status das tarefas</h3>
           <canvas id="chartStatus" height="220"></canvas>
         </div>
         <div class="chart-card">
-          <h3>Por prioridade</h3>
+          <h3>🚦 Por prioridade</h3>
           <canvas id="chartPriority" height="220"></canvas>
         </div>
         <div class="chart-card">
-          <h3>Por categoria</h3>
+          <h3>🏷️ Por categoria</h3>
           <canvas id="chartCategory" height="220"></canvas>
         </div>
         <div class="chart-card">
-          <h3>Por aba / espaço</h3>
+          <h3>🗂️ Por aba / espaço</h3>
           <canvas id="chartSpace" height="220"></canvas>
         </div>
       </div>
 
       <div class="chart-card wide">
-        <h3>Atividade recente</h3>
+        <h3>🕒 Atividade recente</h3>
         <ul id="activityLog" class="activity-log"></ul>
       </div>
     </section>

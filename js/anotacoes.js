@@ -47,10 +47,11 @@ function noteCardHTML(note) {
   const preview = stripHtml(note.contentHTML).slice(0, 160);
   const color = NOTE_COLORS.find((c) => c.id === note.color) || NOTE_COLORS[0];
   return `
-  <div class="note-card" data-id="${note.id}" style="background:${color.hex}">
-    <h4 class="note-card-title">${escapeHtmlNote(note.title || "Sem título")}</h4>
-    <p class="note-card-preview">${escapeHtmlNote(preview) || "<em>Vazia</em>"}</p>
-    <div class="note-card-meta">${timeAgoNote(note.updatedAt)}</div>
+  <div class="note-row" data-id="${note.id}">
+    <span class="note-row-color" style="background:${color.hex}"></span>
+    <span class="note-row-title">${escapeHtmlNote(note.title || "Sem título")}</span>
+    <span class="note-row-preview">${escapeHtmlNote(preview) || "<em>Vazia</em>"}</span>
+    <span class="note-row-meta">${timeAgoNote(note.updatedAt)}</span>
   </div>`;
 }
 
@@ -66,8 +67,8 @@ function renderAnotacoesView() {
   grid.innerHTML = notes.map(noteCardHTML).join("") ||
     '<div class="theme-empty">Nenhuma anotação ainda. Clique em "+ Nova anotação" para começar.</div>';
 
-  grid.querySelectorAll(".note-card").forEach((card) => {
-    card.addEventListener("click", () => openNoteModal(card.dataset.id));
+  grid.querySelectorAll(".note-row").forEach((row) => {
+    row.addEventListener("click", () => openNoteModal(row.dataset.id));
   });
 }
 

@@ -417,16 +417,17 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .activity-log li b { color: var(--text); font-weight: 600; }
 
 /* Anotações */
-.notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; align-items: start; }
-.note-card {
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer;
-  box-shadow: var(--shadow); transition: transform .15s ease, box-shadow .15s ease; color: #1c1f2b;
-  display: flex; flex-direction: column; gap: 6px; min-height: 110px;
+.notes-list { display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.note-row {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer;
+  border-top: 1px solid var(--border); transition: background .12s ease;
 }
-.note-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-.note-card-title { margin: 0; font-size: .92rem; font-weight: 700; }
-.note-card-preview { margin: 0; font-size: .8rem; opacity: .8; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; white-space: pre-wrap; }
-.note-card-meta { font-size: .68rem; opacity: .6; }
+.note-row:first-child { border-top: none; }
+.note-row:hover { background: var(--primary-soft); }
+.note-row-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid var(--border); }
+.note-row-title { flex-shrink: 0; width: 220px; max-width: 30%; font-weight: 700; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-row-preview { flex: 1; min-width: 0; font-size: .82rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-row-meta { flex-shrink: 0; font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
 
 .note-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
 .note-tb-btn { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 9px; font-size: .8rem; cursor: pointer; color: var(--text); }

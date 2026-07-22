@@ -197,16 +197,15 @@
     <section id="view-notas" class="view">
       <header class="topbar">
         <h2>🎯 Notas dos Entregáveis — H2 2026</h2>
+        <div class="spacer"></div>
+        <button id="btnNewEntregaTask" class="btn btn-primary">+ Nova tarefa</button>
       </header>
       <p class="notas-intro">
-        A nota de cada entregável é calculada automaticamente com base nas tarefas marcadas abaixo.
-        Os níveis são cumulativos: a nota só sobe quando todas as tarefas do nível estiverem concluídas.
-        Marcar aqui salva no seu navegador — para registrar oficialmente no repositório, baixe o arquivo
-        (botão em cada card) ou peça para eu commitar por você.
+        Cadastre e atualize as tarefas de cada entregável como preferir — a nota prévia é calculada
+        automaticamente. Os níveis são cumulativos: a nota só sobe quando todas as tarefas do nível
+        estiverem concluídas.
       </p>
-      <div id="notasGrid" class="notas-grid">
-        <div class="theme-empty">Carregando entregáveis...</div>
-      </div>
+      <div id="notasGrid" class="notas-grid"></div>
     </section>
 
   </main>
@@ -311,6 +310,64 @@
         <button type="button" id="btnDeleteTask" class="btn btn-danger-ghost hidden">Excluir</button>
         <div class="spacer"></div>
         <button type="button" id="btnCancel" class="btn btn-ghost">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar tarefa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Entregável Task Modal -->
+<div id="entregaTaskModal" class="modal-overlay hidden">
+  <div class="modal">
+    <button class="modal-close" id="btnCloseEntregaModal">✕</button>
+    <form id="entregaTaskForm">
+      <input type="hidden" id="entregaTaskId" />
+      <div class="modal-header">
+        <h3 id="entregaModalTitle">Nova tarefa do entregável</h3>
+      </div>
+
+      <div class="field">
+        <label>Entregável</label>
+        <select id="entregaTaskDeliverable"></select>
+      </div>
+
+      <div class="modal-grid">
+        <div class="field">
+          <label>Nível / Nota que comprova</label>
+          <select id="entregaTaskNota">
+            <option value="2">Nota 2</option>
+            <option value="3">Nota 3</option>
+            <option value="4">Nota 4</option>
+            <option value="5">Nota 5</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="entregaTaskStatus">
+            <option value="pendente">Pendente</option>
+            <option value="concluida">Concluída</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="entregaTaskDue" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Nome da tarefa</label>
+        <input type="text" id="entregaTaskName" placeholder="Ex: Publicar diagnóstico da migração" required maxlength="160" />
+      </div>
+
+      <div class="field">
+        <label>Descrição (opcional)</label>
+        <textarea id="entregaTaskDescription" rows="3" placeholder="Detalhes, links, contexto..."></textarea>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnDeleteEntregaTask" class="btn btn-danger-ghost hidden">Excluir</button>
+        <div class="spacer"></div>
+        <button type="button" id="btnCancelEntregaTask" class="btn btn-ghost">Cancelar</button>
         <button type="submit" class="btn btn-primary">Salvar tarefa</button>
       </div>
     </form>

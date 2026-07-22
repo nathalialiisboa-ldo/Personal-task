@@ -1,234 +1,251 @@
-/* Notas H2 — lê os arquivos markdown em /entregaveis, calcula a nota prévia
-   (1 a 5, cumulativa) de cada entregável e renderiza um painel com checkboxes.
-   Fonte da verdade: os arquivos .md do repositório. Edições feitas na tela ficam
-   guardadas no navegador (rascunho) até serem exportadas/commitadas. */
+/* Notas H2 — você cadastra e atualiza tarefas livremente (como na aba de tarefas),
+   vinculando cada uma a um entregável e ao nível de nota que ela ajuda a comprovar.
+   A nota prévia de cada entregável é calculada automaticamente e de forma cumulativa:
+   um nível só conta quando TODAS as suas tarefas estiverem concluídas. */
 
-const DELIVERABLE_FILES = [
-  { file: "entregaveis/hub-ia.md", accent: "purple" },
-  { file: "entregaveis/trilha-desenvolvimento.md", accent: "blue" },
-  { file: "entregaveis/sustentacao-programas.md", accent: "teal" },
+const LS_ENTREGA_TASKS = "ptasks_entrega_tasks_v1";
+
+const DELIVERABLES = [
+  {
+    id: "hub-ia",
+    accent: "purple",
+    name: "HUB de IA (migração Mindsight + Clima/Engajamento Gupy)",
+    nota1: "AVD de janeiro rodou na Mindsight e/ou clima seguiu na Gupy. 0% migrado.",
+    levels: {
+      2: "Diagnóstico e roadmap publicados, mas Mindsight e/ou Gupy ainda em uso ativo na virada de janeiro.",
+      3: "AVD de janeiro 100% na plataforma interna (zero uso da Mindsight no ciclo). Módulo de clima rodando no Hub (zero uso da Gupy no ciclo).",
+      4: "Nota 3 + zero incidentes/retrabalho reportado no ciclo de AVD/clima.",
+      5: "Nota 4 + contratos/licenças da Mindsight e da Gupy (módulo clima) cancelados ou não renovados, com redução de custo documentada.",
+    },
+  },
+  {
+    id: "trilha",
+    accent: "blue",
+    name: "Trilha de Desenvolvimento",
+    nota1: "Nenhum modelo publicado ligado à Unico Skill.",
+    levels: {
+      2: "Modelo por área publicado, mas 0 áreas com plano registrado na Unico Skill.",
+      3: "Modelo publicado e 100% das áreas-chave com plano registrado na Unico Skill. Mecanismo de acompanhamento por líderes criado e testado em pelo menos 1 ciclo.",
+      4: "Nota 3 + 80% dos líderes preencheram o registro no prazo sem cobrança manual.",
+      5: "Nota 4 + dados do acompanhamento geraram pelo menos 1 decisão documentada de G&G no ciclo.",
+    },
+  },
+  {
+    id: "sustentacao",
+    accent: "teal",
+    name: "Sustentação dos Programas de Reconhecimento e Mapa de Talentos",
+    nota1: "Algum ciclo de reconhecimento não executado, ou Pool de Talentos sem atualização no período.",
+    levels: {
+      2: "Ciclos executados com atraso frente ao calendário (mais de 5 dias), ou Pool atualizado parcialmente.",
+      3: "100% dos ciclos executados na data planejada. Pool de Talentos e Glossário de Competências atualizados a cada ciclo.",
+      4: "Nota 3 + pelo menos 1 melhoria de processo implementada e documentada.",
+      5: "Nota 4 + melhoria resultou em redução mensurável de tempo/esforço, documentada com números.",
+    },
+  },
 ];
 
-const LS_ENTREGAVEIS_DRAFT = "ptasks_entregaveis_draft_v1";
-
-function loadEntregaveisDraft() {
+function loadEntregaTasks() {
   try {
-    const raw = localStorage.getItem(LS_ENTREGAVEIS_DRAFT);
-    return raw ? JSON.parse(raw) : {};
+    const raw = localStorage.getItem(LS_ENTREGA_TASKS);
+    return raw ? JSON.parse(raw) : [];
   } catch {
-    return {};
+    return [];
   }
 }
-function saveEntregaveisDraft(draft) {
-  localStorage.setItem(LS_ENTREGAVEIS_DRAFT, JSON.stringify(draft));
-}
-
-function parseDeliverableMarkdown(text, file) {
-  const lines = text.split(/\r?\n/);
-  let title = "";
-  let level1Text = "";
-  const levels = {}; // { 2: {text, tasks:[]}, 3: {...}, 4: {...}, 5: {...} }
-  let currentLevel = null;
-
-  lines.forEach((raw, lineIndex) => {
-    const line = raw.trim();
-    if (line.startsWith("# ")) { title = line.slice(2).trim(); return; }
-    const levelMatch = line.match(/^## Nota (\d)/);
-    if (levelMatch) {
-      currentLevel = Number(levelMatch[1]);
-      if (currentLevel >= 2) levels[currentLevel] = { text: "", tasks: [] };
-      return;
-    }
-    if (currentLevel === null || line === "") return;
-
-    const cbMatch = line.match(/^-\s*\[([ xX])\]\s*(.+)$/);
-    if (cbMatch && currentLevel >= 2) {
-      const done = cbMatch[1].toLowerCase() === "x";
-      const parts = cbMatch[2].split(" — ").map((p) => p.trim());
-      const name = parts[0];
-      let due = null;
-      const descParts = [];
-      parts.slice(1).forEach((p) => {
-        const dueMatch = p.match(/^prazo:\s*(\d{4}-\d{2}-\d{2})$/i);
-        if (dueMatch) due = dueMatch[1];
-        else descParts.push(p);
-      });
-      levels[currentLevel].tasks.push({
-        name, done, due, description: descParts.join(" — "), lineIndex,
-      });
-      return;
-    }
-
-    if (currentLevel === 1) level1Text += (level1Text ? " " : "") + line;
-    else if (currentLevel >= 2 && levels[currentLevel]) {
-      levels[currentLevel].text += (levels[currentLevel].text ? " " : "") + line;
-    }
-  });
-
-  return { file, title, level1Text, levels, lines };
-}
-
-function computeNota(levels) {
-  let nota = 1;
-  for (let lvl = 2; lvl <= 5; lvl++) {
-    const level = levels[lvl];
-    if (!level || level.tasks.length === 0) break;
-    if (level.tasks.every((t) => t.done)) nota = lvl;
-    else break;
-  }
-  return nota;
-}
-
-function computeProgressToNext(levels, nota) {
-  const next = nota + 1;
-  if (next > 5) return null;
-  const level = levels[next];
-  if (!level || level.tasks.length === 0) return { pct: 0, done: 0, total: 0 };
-  const done = level.tasks.filter((t) => t.done).length;
-  return { pct: Math.round((done / level.tasks.length) * 100), done, total: level.tasks.length };
-}
-
-function toggleTaskLine(lines, lineIndex) {
-  const line = lines[lineIndex];
-  if (/\[ \]/.test(line)) lines[lineIndex] = line.replace("[ ]", "[x]");
-  else if (/\[[xX]\]/.test(line)) lines[lineIndex] = line.replace(/\[[xX]\]/, "[ ]");
-  return lines;
-}
+function saveEntregaTasks(list) { localStorage.setItem(LS_ENTREGA_TASKS, JSON.stringify(list)); }
+function uidEntrega() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
 function escapeHtmlNotas(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-const deliverableState = {}; // file -> { title, level1Text, levels, lines, originalText, accent }
-
-async function loadDeliverable(entry) {
-  const draft = loadEntregaveisDraft();
-  let text;
-  if (draft[entry.file]) {
-    text = draft[entry.file];
-  } else {
-    const res = await fetch(entry.file, { cache: "no-store" });
-    text = await res.text();
+function computeNota(tasksForDeliverable) {
+  let nota = 1;
+  for (let lvl = 2; lvl <= 5; lvl++) {
+    const levelTasks = tasksForDeliverable.filter((t) => t.nota === lvl);
+    if (levelTasks.length === 0) break;
+    if (levelTasks.every((t) => t.status === "concluida")) nota = lvl;
+    else break;
   }
-  const parsed = parseDeliverableMarkdown(text, entry.file);
-  deliverableState[entry.file] = { ...parsed, accent: entry.accent };
+  return nota;
 }
 
-async function syncDeliverableFromRepo(file) {
-  const draft = loadEntregaveisDraft();
-  delete draft[file];
-  saveEntregaveisDraft(draft);
-  const entry = DELIVERABLE_FILES.find((d) => d.file === file);
-  await loadDeliverable(entry);
-  renderNotasView();
-  if (window.showToast) window.showToast("Sincronizado com o repositório");
+function computeProgressToNext(tasksForDeliverable, nota) {
+  const next = nota + 1;
+  if (next > 5) return null;
+  const levelTasks = tasksForDeliverable.filter((t) => t.nota === next);
+  if (levelTasks.length === 0) return { pct: 0, done: 0, total: 0 };
+  const done = levelTasks.filter((t) => t.status === "concluida").length;
+  return { pct: Math.round((done / levelTasks.length) * 100), done, total: levelTasks.length };
 }
 
-function downloadDeliverableFile(file) {
-  const state = deliverableState[file];
-  if (!state) return;
-  const text = state.lines.join("\n");
-  const blob = new Blob([text], { type: "text/markdown" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = file.split("/").pop();
-  a.click();
-  URL.revokeObjectURL(a.href);
+function levelTaskRowHTML(task) {
+  const isDone = task.status === "concluida";
+  return `
+  <div class="entrega-task-row ${isDone ? "is-complete" : ""}" data-id="${task.id}">
+    <button type="button" class="theme-row-status ${isDone ? "is-complete" : ""}" title="Marcar como concluída">${isDone ? "✓" : ""}</button>
+    <span class="entrega-task-name">${escapeHtmlNotas(task.name)}</span>
+    <span class="entrega-task-meta">
+      ${task.due ? `<span class="chip">📅 ${task.due}</span>` : ""}
+    </span>
+  </div>`;
 }
 
-function notaCardHTML(state) {
-  const nota = computeNota(state.levels);
-  const progress = computeProgressToNext(state.levels, nota);
-  const draft = loadEntregaveisDraft();
-  const isDirty = !!draft[state.file];
+function deliverableCardHTML(dlv, allTasks) {
+  const tasksForDlv = allTasks.filter((t) => t.deliverableId === dlv.id);
+  const nota = computeNota(tasksForDlv);
+  const progress = computeProgressToNext(tasksForDlv, nota);
 
   const levelsHTML = [2, 3, 4, 5].map((lvl) => {
-    const level = state.levels[lvl];
-    if (!level) return "";
+    const levelTasks = tasksForDlv.filter((t) => t.nota === lvl);
     const achieved = nota >= lvl;
-    const doneCount = level.tasks.filter((t) => t.done).length;
+    const doneCount = levelTasks.filter((t) => t.status === "concluida").length;
     return `
     <details class="nota-level ${achieved ? "achieved" : ""}" ${lvl === nota + 1 ? "open" : ""}>
       <summary class="nota-level-header">
         <span class="chevron">▶</span>
         <span class="nota-level-badge">Nota ${lvl}</span>
-        <span class="nota-level-text">${escapeHtmlNotas(level.text)}</span>
-        <span class="nota-level-count">${doneCount}/${level.tasks.length}</span>
+        <span class="nota-level-text">${escapeHtmlNotas(dlv.levels[lvl])}</span>
+        <span class="nota-level-count">${doneCount}/${levelTasks.length}</span>
       </summary>
       <div class="nota-level-tasks">
-        ${level.tasks.map((t) => `
-          <label class="nota-task ${t.done ? "done" : ""}">
-            <input type="checkbox" data-file="${escapeHtmlNotas(state.file)}" data-line="${t.lineIndex}" ${t.done ? "checked" : ""} />
-            <span class="nota-task-text">
-              <span class="nota-task-name">${escapeHtmlNotas(t.name)}</span>
-              ${t.due ? `<span class="chip">📅 ${t.due}</span>` : ""}
-              ${t.description ? `<span class="nota-task-desc">${escapeHtmlNotas(t.description)}</span>` : ""}
-            </span>
-          </label>`).join("")}
+        ${levelTasks.map(levelTaskRowHTML).join("") || '<div class="entrega-empty">Nenhuma tarefa cadastrada ainda.</div>'}
+        <button type="button" class="btn btn-ghost entrega-add-task" data-deliverable="${dlv.id}" data-nota="${lvl}">+ Adicionar tarefa</button>
       </div>
     </details>`;
   }).join("");
 
   return `
-  <div class="nota-card accent-${state.accent}">
+  <div class="nota-card accent-${dlv.accent}">
     <div class="nota-card-header">
-      <h3>${escapeHtmlNotas(state.title)}</h3>
+      <h3>${escapeHtmlNotas(dlv.name)}</h3>
       <div class="nota-badge">${nota}<small>/5</small></div>
     </div>
-    <p class="nota-level1-text">Nível 1 (padrão): ${escapeHtmlNotas(state.level1Text)}</p>
-    ${progress ? `
+    <p class="nota-level1-text">Nível 1 (padrão): ${escapeHtmlNotas(dlv.nota1)}</p>
+    ${progress ? (progress.total > 0 ? `
       <div class="nota-progress-label">Rumo à nota ${nota + 1}: ${progress.done}/${progress.total} tarefas</div>
       <div class="progress-bar"><div class="progress-bar-fill" style="width:${progress.pct}%"></div></div>
-    ` : `<div class="nota-progress-label">Nota máxima atingida 🎉</div>`}
+    ` : `<div class="nota-progress-label">Rumo à nota ${nota + 1}: cadastre tarefas no nível ${nota + 1} abaixo</div>`) : `<div class="nota-progress-label">Nota máxima atingida 🎉</div>`}
     <div class="nota-levels">${levelsHTML}</div>
-    <div class="nota-card-footer">
-      ${isDirty ? '<span class="nota-dirty-flag">● alterações não sincronizadas</span>' : ""}
-      <button type="button" class="btn btn-ghost nota-btn-sync" data-file="${escapeHtmlNotas(state.file)}">🔄 Sincronizar</button>
-      <button type="button" class="btn btn-ghost nota-btn-download" data-file="${escapeHtmlNotas(state.file)}">⬇️ Baixar ${state.file.split("/").pop()}</button>
-    </div>
   </div>`;
 }
 
-async function renderNotasView() {
+function renderNotasView() {
   const grid = document.getElementById("notasGrid");
   if (!grid) return;
-  grid.innerHTML = '<div class="theme-empty">Carregando entregáveis...</div>';
+  const allTasks = loadEntregaTasks();
+  grid.innerHTML = DELIVERABLES.map((dlv) => deliverableCardHTML(dlv, allTasks)).join("");
 
-  try {
-    await Promise.all(DELIVERABLE_FILES.map((entry) => {
-      if (!deliverableState[entry.file]) return loadDeliverable(entry);
-      return Promise.resolve();
-    }));
-  } catch (e) {
-    grid.innerHTML = '<div class="theme-empty">Não foi possível carregar os arquivos de entregáveis. Se você abriu o arquivo direto do computador (file://), rode um servidor local ou acesse pelo link publicado.</div>';
-    return;
-  }
-
-  grid.innerHTML = DELIVERABLE_FILES.map((entry) => notaCardHTML(deliverableState[entry.file])).join("");
-
-  grid.querySelectorAll('input[type="checkbox"][data-file]').forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const file = cb.dataset.file;
-      const lineIndex = Number(cb.dataset.line);
-      const state = deliverableState[file];
-      toggleTaskLine(state.lines, lineIndex);
-      const draft = loadEntregaveisDraft();
-      draft[file] = state.lines.join("\n");
-      saveEntregaveisDraft(draft);
-      const reparsed = parseDeliverableMarkdown(draft[file], file);
-      deliverableState[file] = { ...reparsed, accent: entry_accent(file) };
+  grid.querySelectorAll(".entrega-add-task").forEach((btn) => {
+    btn.addEventListener("click", () => openEntregaTaskModal(null, btn.dataset.deliverable, Number(btn.dataset.nota)));
+  });
+  grid.querySelectorAll(".entrega-task-row").forEach((row) => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".theme-row-status")) return;
+      openEntregaTaskModal(row.dataset.id);
+    });
+  });
+  grid.querySelectorAll(".entrega-task-row .theme-row-status").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = btn.closest(".entrega-task-row").dataset.id;
+      const list = loadEntregaTasks();
+      const task = list.find((t) => t.id === id);
+      if (!task) return;
+      task.status = task.status === "concluida" ? "pendente" : "concluida";
+      task.updatedAt = Date.now();
+      saveEntregaTasks(list);
       renderNotasView();
     });
   });
-  grid.querySelectorAll(".nota-btn-download").forEach((btn) => {
-    btn.addEventListener("click", () => downloadDeliverableFile(btn.dataset.file));
-  });
-  grid.querySelectorAll(".nota-btn-sync").forEach((btn) => {
-    btn.addEventListener("click", () => syncDeliverableFromRepo(btn.dataset.file));
-  });
 }
 
-function entry_accent(file) {
-  const found = DELIVERABLE_FILES.find((d) => d.file === file);
-  return found ? found.accent : "purple";
+// ---------- Modal ----------
+let currentEntregaTaskId = null;
+
+function openEntregaTaskModal(id, presetDeliverable, presetNota) {
+  currentEntregaTaskId = id || null;
+  const modal = document.getElementById("entregaTaskModal");
+  const form = document.getElementById("entregaTaskForm");
+  form.reset();
+  document.getElementById("entregaTaskId").value = "";
+  document.getElementById("btnDeleteEntregaTask").classList.toggle("hidden", !id);
+
+  const deliverableSelect = document.getElementById("entregaTaskDeliverable");
+  deliverableSelect.innerHTML = DELIVERABLES.map((d) => `<option value="${d.id}">${escapeHtmlNotas(d.name)}</option>`).join("");
+
+  if (id) {
+    const list = loadEntregaTasks();
+    const task = list.find((t) => t.id === id);
+    if (!task) return;
+    document.getElementById("entregaTaskId").value = task.id;
+    document.getElementById("entregaTaskName").value = task.name;
+    deliverableSelect.value = task.deliverableId;
+    document.getElementById("entregaTaskNota").value = task.nota;
+    document.getElementById("entregaTaskStatus").value = task.status;
+    document.getElementById("entregaTaskDue").value = task.due || "";
+    document.getElementById("entregaTaskDescription").value = task.description || "";
+    document.getElementById("entregaModalTitle").textContent = "Editar tarefa do entregável";
+  } else {
+    deliverableSelect.value = presetDeliverable || DELIVERABLES[0].id;
+    document.getElementById("entregaTaskNota").value = presetNota || 2;
+    document.getElementById("entregaTaskStatus").value = "pendente";
+    document.getElementById("entregaModalTitle").textContent = "Nova tarefa do entregável";
+  }
+  modal.classList.remove("hidden");
+  setTimeout(() => document.getElementById("entregaTaskName").focus(), 50);
 }
+
+function closeEntregaTaskModal() {
+  document.getElementById("entregaTaskModal").classList.add("hidden");
+  currentEntregaTaskId = null;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("entregaTaskForm");
+  if (!form) return;
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = document.getElementById("entregaTaskId").value;
+    const list = loadEntregaTasks();
+    const now = Date.now();
+    let task = id ? list.find((t) => t.id === id) : null;
+    const isNew = !task;
+    if (!task) { task = { id: uidEntrega(), createdAt: now }; list.unshift(task); }
+
+    task.deliverableId = document.getElementById("entregaTaskDeliverable").value;
+    task.nota = Number(document.getElementById("entregaTaskNota").value);
+    task.name = document.getElementById("entregaTaskName").value.trim();
+    task.status = document.getElementById("entregaTaskStatus").value;
+    task.due = document.getElementById("entregaTaskDue").value || null;
+    task.description = document.getElementById("entregaTaskDescription").value.trim();
+    task.updatedAt = now;
+
+    saveEntregaTasks(list);
+    closeEntregaTaskModal();
+    renderNotasView();
+    if (window.showToast) window.showToast(isNew ? "Tarefa criada ✨" : "Tarefa atualizada ✅");
+  });
+
+  document.getElementById("btnDeleteEntregaTask").addEventListener("click", () => {
+    if (!currentEntregaTaskId) return;
+    if (!confirm("Excluir esta tarefa?")) return;
+    const list = loadEntregaTasks().filter((t) => t.id !== currentEntregaTaskId);
+    saveEntregaTasks(list);
+    closeEntregaTaskModal();
+    renderNotasView();
+    if (window.showToast) window.showToast("Tarefa excluída 🗑️");
+  });
+
+  document.getElementById("btnCloseEntregaModal").addEventListener("click", closeEntregaTaskModal);
+  document.getElementById("btnCancelEntregaTask").addEventListener("click", closeEntregaTaskModal);
+  document.getElementById("entregaTaskModal").addEventListener("click", (e) => {
+    if (e.target.id === "entregaTaskModal") closeEntregaTaskModal();
+  });
+  document.getElementById("btnNewEntregaTask").addEventListener("click", () => openEntregaTaskModal(null));
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeEntregaTaskModal();
+  });
+});

@@ -382,7 +382,14 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .nota-level.achieved .nota-level-badge { background: var(--success); color: #fff; }
 .nota-level-text { flex: 1; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nota-level-count { flex-shrink: 0; font-size: .7rem; color: var(--text-muted); }
-.nota-level-tasks { padding: 4px 12px 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
+.nota-level-tasks { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); }
+.entrega-task-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: var(--radius-sm); cursor: pointer; font-size: .82rem; }
+.entrega-task-row:hover { background: var(--primary-soft); }
+.entrega-task-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entrega-task-row.is-complete .entrega-task-name { text-decoration: line-through; color: var(--text-muted); }
+.entrega-task-meta { flex-shrink: 0; font-size: .7rem; color: var(--text-muted); }
+.entrega-empty { font-size: .78rem; color: var(--text-muted); padding: 4px; }
+.entrega-add-task { align-self: flex-start; font-size: .76rem; padding: 5px 10px; margin-top: 2px; }
 .nota-task { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding-top: 8px; }
 .nota-task input[type="checkbox"] { margin-top: 3px; accent-color: var(--primary); flex-shrink: 0; }
 .nota-task-text { display: flex; flex-direction: column; gap: 2px; font-size: .82rem; }

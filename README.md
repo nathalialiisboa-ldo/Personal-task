@@ -16,7 +16,7 @@ Aplicativo web interativo (HTML/CSS/JS puro, sem backend) para gerenciar tarefas
 - **Tema claro/escuro**, com detecção automática da preferência do sistema.
 - **Exportar/Importar dados** em JSON (inclui anexos) para backup ou migração.
 - **100% local**: os dados ficam no navegador (localStorage para tarefas/atividades, IndexedDB para os arquivos anexados). Nenhum dado é enviado a servidores.
-- **Notas H2 (entregáveis)**: painel que calcula automaticamente a nota prévia (1 a 5, cumulativa) de cada entregável do semestre, com base em checklists de tarefas por nível de nota. Veja a seção [Notas dos Entregáveis](#notas-dos-entregáveis) abaixo.
+- **Notas H2 (entregáveis)**: cadastre e atualize tarefas livremente para cada um dos 3 entregáveis do semestre (nome, descrição, data, status), vinculando cada tarefa ao nível de nota que ela comprova. A nota prévia (1 a 5, cumulativa) é calculada automaticamente. Veja a seção [Notas dos Entregáveis](#notas-dos-entregáveis) abaixo.
 
 ## Como usar
 
@@ -36,32 +36,23 @@ index.html               Estrutura da aplicação (painel, dashboard, notas, mod
 css/style.css             Estilos, temas e layout responsivo
 js/db.js                  Camada IndexedDB para anexos (fotos/arquivos/evidências)
 js/app.js                 Lógica da aplicação: CRUD, filtros, métricas e gráficos
-js/entregaveis.js         Lógica do painel de Notas H2 (lê os .md de /entregaveis)
-entregaveis/*.md          Checklists por entregável, fonte da verdade das notas
+js/entregaveis.js         Lógica do painel de Notas H2: tarefas por entregável e cálculo de nota
 ```
 
 ## Notas dos Entregáveis
 
-A aba **"🎯 Notas H2"** calcula automaticamente a nota prévia (1 a 5) de cada entregável do
-semestre, com base nas tarefas marcadas nos arquivos `entregaveis/*.md`.
+A aba **"🎯 Notas H2"** mostra os 3 entregáveis do semestre (Hub de IA, Trilha de
+Desenvolvimento, Sustentação dos Programas), cada um com sua régua de nota (1 a 5) fixa.
 
-- Cada entregável tem seções `## Nota 2` a `## Nota 5` com uma lista de tarefas em checkbox
-  (`- [ ] tarefa — prazo: AAAA-MM-DD — descrição opcional`). A "Nota 1" é o estado padrão, sem
-  tarefas — é o que já vale se nada for feito.
-- **A nota só sobe quando todas as tarefas daquele nível estiverem concluídas** (níveis
-  cumulativos: não dá pra pular do 2 pro 4 sem completar o 3).
-- Marcar um checkbox na tela salva um rascunho no navegador (não altera o arquivo do
-  repositório). Para registrar oficialmente o progresso:
-  - baixe o arquivo atualizado pelo botão do card (mesmo nome do arquivo original) e suba no
-    GitHub em **Add file → Upload files**, arrastando por cima do arquivo antigo; ou
-  - peça para o Claude commitar a alteração diretamente no repositório.
-- O botão **"🔄 Sincronizar"** descarta o rascunho local e volta a mostrar a última versão
-  publicada no repositório.
+- Use **"+ Nova tarefa"** (ou o "+ Adicionar tarefa" dentro de cada nível) para cadastrar uma
+  tarefa: nome, descrição opcional, data opcional, o entregável e o **nível/nota** que ela ajuda
+  a comprovar.
+- Marque como concluída pelo círculo ao lado da tarefa, ou editando-a.
+- **A nota prévia sobe automaticamente só quando todas as tarefas daquele nível estiverem
+  concluídas** (níveis cumulativos: não dá pra pular do 2 pro 4 sem completar o 3).
+- Assim como o resto do app, os dados ficam salvos no navegador (localStorage).
 
 ## Observações
 
 - Arquivos individuais anexados são limitados a 8MB para preservar performance do navegador.
 - Como os dados residem no navegador, use "Exportar dados" periodicamente para backup, ou para levar suas tarefas para outro dispositivo/navegador (via "Importar dados").
-- O painel de Notas H2 usa `fetch()` para ler os arquivos `.md`, então só funciona servido por
-  http(s) (GitHub Pages ou um servidor local) — não abrindo o `index.html` direto como arquivo
-  (`file://`).

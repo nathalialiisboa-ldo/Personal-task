@@ -106,6 +106,7 @@
     $("#btnViewTheme").classList.toggle("active", mode === "theme");
     boardColumns.classList.toggle("hidden", mode !== "board");
     themeListEl.classList.toggle("hidden", mode !== "theme");
+    $("#themeToolbar").classList.toggle("hidden", mode !== "theme");
     renderBoard();
   }
 
@@ -128,11 +129,45 @@
   }
 
   function updateCategoryOptions() {
-    const cats = Array.from(new Set(tasks.map((t) => t.category).filter(Boolean))).sort();
+    const cats = Array.from(new Set([
+      ...tasks.map((t) => t.category).filter(Boolean),
+      ...loadCustomThemes()[currentSpace] || [],
+    ])).sort();
     const currentVal = categoryFilter.value;
     categoryFilter.innerHTML = '<option value="">Todas</option>' + cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     if (cats.includes(currentVal)) categoryFilter.value = currentVal;
     $("#categoryList").innerHTML = cats.map((c) => `<option value="${escapeHtml(c)}">`).join("");
+  }
+
+  // ---------- Custom (empty) themes ----------
+  const LS_CUSTOM_THEMES = "ptasks_customthemes_v1";
+  function loadCustomThemes() { return loadJSON(LS_CUSTOM_THEMES, {}); }
+  function saveCustomThemes(obj) { localStorage.setItem(LS_CUSTOM_THEMES, JSON.stringify(obj)); }
+  function addCustomTheme(space, name) {
+    const all = loadCustomThemes();
+    all[space] = all[space] || [];
+    const exists = all[space].some((n) => n.toLowerCase() === name.toLowerCase()) ||
+      tasks.some((t) => (t.space || "todos") === space && (t.category || "").toLowerCase() === name.toLowerCase());
+    if (!exists) all[space].push(name);
+    saveCustomThemes(all);
+  }
+  function removeCustomTheme(space, name) {
+    const all = loadCustomThemes();
+    if (all[space]) all[space] = all[space].filter((n) => n !== name);
+    saveCustomThemes(all);
+  }
+  function renameThemeEverywhere(oldName, newName) {
+    let changed = false;
+    tasks.forEach((t) => {
+      if ((t.category || "Sem tema") === oldName) { t.category = newName; changed = true; }
+    });
+    if (changed) saveTasks();
+    const all = loadCustomThemes();
+    Object.keys(all).forEach((space) => {
+      all[space] = all[space].map((n) => (n === oldName ? newName : n));
+    });
+    saveCustomThemes(all);
+    if (closedThemeGroups.has(oldName)) { closedThemeGroups.delete(oldName); closedThemeGroups.add(newName); }
   }
 
   function escapeHtml(str) {
@@ -226,9 +261,11 @@
     renderThemeList(list);
 
     const spaceTasks = tasks.filter((t) => (t.space || "todos") === currentSpace);
-    emptyState.classList.toggle("hidden", spaceTasks.length !== 0);
-    boardColumns.classList.toggle("hidden", spaceTasks.length === 0 || boardMode !== "board");
-    themeListEl.classList.toggle("hidden", spaceTasks.length === 0 || boardMode !== "theme");
+    const hasCustomThemes = (loadCustomThemes()[currentSpace] || []).length > 0;
+    const isSpaceEmpty = spaceTasks.length === 0 && !hasCustomThemes;
+    emptyState.classList.toggle("hidden", !isSpaceEmpty);
+    boardColumns.classList.toggle("hidden", isSpaceEmpty || boardMode !== "board");
+    themeListEl.classList.toggle("hidden", isSpaceEmpty || boardMode !== "theme");
 
     updateCategoryOptions();
     updateTopStats();
@@ -260,8 +297,11 @@
       groups[key].push(t);
     });
 
+    const emptyThemeNames = (loadCustomThemes()[currentSpace] || []).filter((name) => !(name in groups));
+    emptyThemeNames.forEach((name) => { groups[name] = []; order.push(name); });
+
     if (order.length === 0) {
-      themeListEl.innerHTML = "";
+      themeListEl.innerHTML = `<div class="theme-empty">Nenhum tema por aqui. Clique em "+ Novo tema" para criar um.</div>`;
       return;
     }
 
@@ -270,15 +310,18 @@
       const doneCount = items.filter((t) => t.status === "done" || t.status === "finalized").length;
       const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
       const isOpen = !closedThemeGroups.has(theme);
+      const isEmpty = items.length === 0;
       return `
       <details class="theme-group" data-theme="${escapeHtml(theme)}" ${isOpen ? "open" : ""}>
         <summary class="theme-group-header">
           <span class="chevron">▶</span>
-          <span class="theme-group-title">${escapeHtml(theme)}</span>
+          <input type="text" class="theme-group-title" value="${escapeHtml(theme)}" readonly />
+          <button type="button" class="theme-group-edit" title="Renomear tema">✏️</button>
           <span class="theme-group-count">${doneCount}/${items.length} concluídas</span>
           <span class="theme-group-progress progress-bar"><span class="progress-bar-fill" style="display:block;width:${pct}%"></span></span>
+          ${isEmpty ? `<button type="button" class="theme-group-delete" title="Remover tema vazio">🗑️</button>` : ""}
         </summary>
-        <div class="theme-rows">${items.map(themeRowHTML).join("")}</div>
+        <div class="theme-rows">${items.length ? items.map(themeRowHTML).join("") : '<div class="theme-empty">Nenhuma tarefa neste tema ainda.</div>'}</div>
       </details>`;
     }).join("");
 
@@ -301,7 +344,60 @@
         changeTaskStatus(id, nowComplete ? "todo" : "done");
       });
     });
+
+    // Inline theme rename
+    $$(".theme-group-title").forEach((input) => {
+      input.addEventListener("click", (e) => e.stopPropagation());
+      input.addEventListener("mousedown", (e) => e.stopPropagation());
+      const original = input.value;
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+        if (e.key === "Escape") { input.value = original; input.readOnly = true; input.blur(); }
+      });
+      input.addEventListener("blur", () => {
+        if (input.readOnly) return;
+        input.readOnly = true;
+        const newName = input.value.trim();
+        if (!newName || newName === original) { input.value = original; renderBoard(); return; }
+        renameThemeEverywhere(original, newName);
+        showToast(`Tema renomeado para "${newName}"`);
+        renderBoard();
+      });
+    });
+    $$(".theme-group-edit").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const details = btn.closest(".theme-group");
+        if (!details.open) details.open = true;
+        const input = details.querySelector(".theme-group-title");
+        input.readOnly = false;
+        input.focus();
+        input.select();
+      });
+    });
+    $$(".theme-group-delete").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const theme = btn.closest(".theme-group").dataset.theme;
+        removeCustomTheme(currentSpace, theme);
+        closedThemeGroups.delete(theme);
+        renderBoard();
+      });
+    });
   }
+
+  $("#btnNewTheme").addEventListener("click", () => {
+    const name = prompt("Nome do novo tema:");
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    addCustomTheme(currentSpace, trimmed);
+    closedThemeGroups.delete(trimmed);
+    renderBoard();
+    showToast(`Tema "${trimmed}" criado`);
+  });
 
   // Drag & drop between columns
   $$(".column-body").forEach((col) => {

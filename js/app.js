@@ -106,7 +106,6 @@
     $("#btnViewTheme").classList.toggle("active", mode === "theme");
     boardColumns.classList.toggle("hidden", mode !== "board");
     themeListEl.classList.toggle("hidden", mode !== "theme");
-    $("#themeToolbar").classList.toggle("hidden", mode !== "theme");
     renderBoard();
   }
 

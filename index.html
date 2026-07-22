@@ -20,8 +20,12 @@
 
     <button id="btnNewTask" class="btn btn-primary btn-block">+ Nova tarefa</button>
 
-    <nav class="nav-views">
-      <button class="nav-item active" data-view="board">📋 Painel</button>
+    <nav class="nav-views" id="spaceNav">
+      <button class="nav-item active" data-view="board" data-space="todos">✅ To do's</button>
+      <button class="nav-item" data-view="board" data-space="1on1">🗣️ 1:1 Yás</button>
+      <button class="nav-item" data-view="board" data-space="entregaveis">📦 Entregáveis</button>
+      <button class="nav-item" data-view="board" data-space="extra">➕ Atividades Extra</button>
+      <button class="nav-item" data-view="board" data-space="anotacoes">📝 Anotações</button>
       <button class="nav-item" data-view="dashboard">📊 Métricas</button>
     </nav>
 
@@ -30,10 +34,13 @@
       <label class="check-filter"><input type="checkbox" value="todo" checked> A fazer</label>
       <label class="check-filter"><input type="checkbox" value="doing" checked> Em andamento</label>
       <label class="check-filter"><input type="checkbox" value="done" checked> Concluída</label>
+      <label class="check-filter"><input type="checkbox" value="finalized" checked> Finalizada</label>
+      <label class="check-filter"><input type="checkbox" value="canceled" checked> Cancelada</label>
     </div>
 
     <div class="sidebar-section">
       <h4>Prioridade</h4>
+      <label class="check-filter"><input type="checkbox" value="urgent" checked> Urgente</label>
       <label class="check-filter"><input type="checkbox" value="high" checked> Alta</label>
       <label class="check-filter"><input type="checkbox" value="medium" checked> Média</label>
       <label class="check-filter"><input type="checkbox" value="low" checked> Baixa</label>
@@ -62,6 +69,7 @@
     <!-- BOARD VIEW -->
     <section id="view-board" class="view active">
       <header class="topbar">
+        <h2 id="spaceTitle">To do's</h2>
         <div class="search-wrap">
           <input type="search" id="searchInput" placeholder="Buscar tarefas..." />
         </div>
@@ -97,6 +105,14 @@
           <div class="column-header"><span>Concluída</span><em id="countDone">0</em></div>
           <div class="column-body" id="col-done"></div>
         </div>
+        <div class="column" data-status="finalized">
+          <div class="column-header"><span>Finalizada</span><em id="countFinalized">0</em></div>
+          <div class="column-body" id="col-finalized"></div>
+        </div>
+        <div class="column" data-status="canceled">
+          <div class="column-header"><span>Cancelada</span><em id="countCanceled">0</em></div>
+          <div class="column-body" id="col-canceled"></div>
+        </div>
       </div>
 
       <div id="emptyState" class="empty-state hidden">
@@ -109,6 +125,14 @@
     <section id="view-dashboard" class="view">
       <header class="topbar">
         <h2>Métricas de uso</h2>
+        <select id="metricsSpace">
+          <option value="">Todas as abas</option>
+          <option value="todos">To do's</option>
+          <option value="1on1">1:1 Yás</option>
+          <option value="entregaveis">Entregáveis</option>
+          <option value="extra">Atividades Extra</option>
+          <option value="anotacoes">Anotações</option>
+        </select>
         <select id="metricsRange">
           <option value="7">Últimos 7 dias</option>
           <option value="14">Últimos 14 dias</option>
@@ -143,6 +167,10 @@
           <h3>Por categoria</h3>
           <canvas id="chartCategory" height="220"></canvas>
         </div>
+        <div class="chart-card">
+          <h3>Por aba / espaço</h3>
+          <canvas id="chartSpace" height="220"></canvas>
+        </div>
       </div>
 
       <div class="chart-card wide">
@@ -168,11 +196,23 @@
 
       <div class="modal-grid">
         <div class="field">
+          <label>Aba / Espaço</label>
+          <select id="taskSpace">
+            <option value="todos">To do's</option>
+            <option value="1on1">1:1 Yás</option>
+            <option value="entregaveis">Entregáveis</option>
+            <option value="extra">Atividades Extra</option>
+            <option value="anotacoes">Anotações</option>
+          </select>
+        </div>
+        <div class="field">
           <label>Status</label>
           <select id="taskStatus">
             <option value="todo">A fazer</option>
             <option value="doing">Em andamento</option>
             <option value="done">Concluída</option>
+            <option value="finalized">Finalizada</option>
+            <option value="canceled">Cancelada</option>
           </select>
         </div>
         <div class="field">
@@ -181,6 +221,7 @@
             <option value="low">Baixa</option>
             <option value="medium" selected>Média</option>
             <option value="high">Alta</option>
+            <option value="urgent">🔴 Urgente</option>
           </select>
         </div>
         <div class="field">
@@ -189,8 +230,20 @@
           <datalist id="categoryList"></datalist>
         </div>
         <div class="field">
-          <label>Prazo</label>
+          <label>Data</label>
           <input type="date" id="taskDue" />
+        </div>
+        <div class="field">
+          <label>Hora</label>
+          <input type="time" id="taskDueTime" />
+        </div>
+      </div>
+
+      <div class="field calendar-actions">
+        <label>Google Agenda</label>
+        <div class="calendar-buttons">
+          <button type="button" id="btnGCal" class="btn btn-ghost">📅 Adicionar ao Google Agenda</button>
+          <button type="button" id="btnIcs" class="btn btn-ghost">⬇️ Baixar .ics</button>
         </div>
       </div>
 

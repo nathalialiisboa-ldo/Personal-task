@@ -4,12 +4,15 @@ Aplicativo web interativo (HTML/CSS/JS puro, sem backend) para gerenciar tarefas
 
 ## Funcionalidades
 
+- **Abas/espaços**: To do's, 1:1 Yás, Entregáveis, Atividades Extra e Anotações — cada uma com seu próprio painel de tarefas.
 - **CRUD completo de tarefas**: criar, editar, ver detalhes e excluir.
-- **Painel Kanban** (A fazer / Em andamento / Concluída) com drag-and-drop, ou visualização em lista.
-- **Detalhes ricos por tarefa**: descrição, prioridade, categoria, prazo, checklist de subtarefas e notas/comentários de progresso.
+- **Painel Kanban** (A fazer / Em andamento / Concluída / Finalizada / Cancelada) com drag-and-drop, ou visualização em lista.
+- **Classificação por prioridade**, incluindo **Urgente** (destaque visual em vermelho pulsante) além de Alta, Média e Baixa.
+- **Detalhes ricos por tarefa**: descrição, prioridade, categoria, data e hora, checklist de subtarefas e notas/comentários de progresso.
+- **Integração com Google Agenda**: botão "Adicionar ao Google Agenda" (abre evento pré-preenchido) e exportação de arquivo `.ics` para importar em qualquer calendário.
 - **Evidências e anexos**: arraste arquivos, cole imagens da área de transferência ou selecione fotos/documentos. Imagens têm preview em miniatura e visualização ampliada (lightbox).
 - **Busca, filtros e ordenação** por status, prioridade, categoria e texto livre.
-- **Métricas de uso**: total de tarefas, taxa de conclusão, tempo médio de conclusão, sequência de dias ativos (streak), gráficos de atividade diária, distribuição por status/prioridade/categoria e um log de atividades recentes.
+- **Métricas de uso**: total de tarefas, taxa de conclusão, tempo médio de conclusão, sequência de dias ativos (streak), gráficos de atividade diária, distribuição por status/prioridade/categoria/aba e um log de atividades recentes — com filtro por aba.
 - **Tema claro/escuro**, com detecção automática da preferência do sistema.
 - **Exportar/Importar dados** em JSON (inclui anexos) para backup ou migração.
 - **100% local**: os dados ficam no navegador (localStorage para tarefas/atividades, IndexedDB para os arquivos anexados). Nenhum dado é enviado a servidores.

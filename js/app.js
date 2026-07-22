@@ -9,9 +9,10 @@
   const LS_ACTIVITY = "ptasks_activity_v1";
   const LS_THEME = "ptasks_theme_v1";
 
-  const STATUS_LABEL = { todo: "A fazer", doing: "Em andamento", done: "Concluída" };
-  const PRIORITY_LABEL = { high: "Alta", medium: "Média", low: "Baixa" };
-  const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+  const STATUS_LABEL = { todo: "A fazer", doing: "Em andamento", done: "Concluída", finalized: "Finalizada", canceled: "Cancelada" };
+  const PRIORITY_LABEL = { urgent: "Urgente", high: "Alta", medium: "Média", low: "Baixa" };
+  const PRIORITY_RANK = { urgent: -1, high: 0, medium: 1, low: 2 };
+  const SPACE_LABEL = { todos: "To do's", "1on1": "1:1 Yás", entregaveis: "Entregáveis", extra: "Atividades Extra", anotacoes: "Anotações" };
 
   // ---------- State ----------
   let tasks = loadJSON(LS_TASKS, []);
@@ -20,6 +21,7 @@
   let removedAttachmentIds = [];
   let currentTaskId = null;
   let boardMode = "board"; // board | list
+  let currentSpace = "todos";
 
   function loadJSON(key, fallback) {
     try {
@@ -59,6 +61,11 @@
       const view = btn.dataset.view;
       $$(".view").forEach((v) => v.classList.remove("active"));
       $(`#view-${view}`).classList.add("active");
+      if (view === "board" && btn.dataset.space) {
+        currentSpace = btn.dataset.space;
+        $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
+        renderBoard();
+      }
       if (view === "dashboard") renderDashboard();
     });
   });
@@ -104,8 +111,8 @@
   categoryFilter.addEventListener("change", renderBoard);
 
   function getActiveFilters() {
-    const statusBoxes = $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"]');
-    const priorityBoxes = $$('.check-filter input[value="high"], .check-filter input[value="medium"], .check-filter input[value="low"]');
+    const statusBoxes = $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"], .check-filter input[value="finalized"], .check-filter input[value="canceled"]');
+    const priorityBoxes = $$('.check-filter input[value="urgent"], .check-filter input[value="high"], .check-filter input[value="medium"], .check-filter input[value="low"]');
     return {
       statuses: statusBoxes.filter((b) => b.checked).map((b) => b.value),
       priorities: priorityBoxes.filter((b) => b.checked).map((b) => b.value),
@@ -133,9 +140,10 @@
     const due = new Date(task.due + "T23:59:59");
     const now = new Date();
     const diffDays = Math.ceil((due - now) / 86400000);
+    const isOpenStatus = task.status !== "done" && task.status !== "finalized" && task.status !== "canceled";
     let cls = "";
-    if (task.status !== "done" && diffDays < 0) cls = "due-overdue";
-    else if (task.status !== "done" && diffDays <= 1) cls = "due-soon";
+    if (isOpenStatus && diffDays < 0) cls = "due-overdue";
+    else if (isOpenStatus && diffDays <= 1) cls = "due-soon";
     return { text: formatDateShort(task.due), cls };
   }
   function formatDateShort(iso) {
@@ -146,6 +154,7 @@
   function filteredSortedTasks() {
     const f = getActiveFilters();
     let list = tasks.filter((t) => {
+      if ((t.space || "todos") !== currentSpace) return false;
       if (!f.statuses.includes(t.status)) return false;
       if (!f.priorities.includes(t.priority)) return false;
       if (f.category && t.category !== f.category) return false;
@@ -171,7 +180,7 @@
     const doneCount = subtasks.filter((s) => s.done).length;
     const attCount = (t.attachmentCount || 0);
     return `
-    <div class="task-card" data-id="${t.id}" draggable="true">
+    <div class="task-card ${t.priority === "urgent" ? "is-urgent" : ""}" data-id="${t.id}" draggable="true">
       <div class="task-card-top">
         <h4>${escapeHtml(t.title)}</h4>
         <span class="priority-dot priority-${t.priority}" title="Prioridade ${PRIORITY_LABEL[t.priority]}"></span>
@@ -189,15 +198,19 @@
 
   function renderBoard() {
     const list = filteredSortedTasks();
-    const cols = { todo: [], doing: [], done: [] };
+    const cols = { todo: [], doing: [], done: [], finalized: [], canceled: [] };
     list.forEach((t) => cols[t.status] && cols[t.status].push(t));
 
     $("#col-todo").innerHTML = cols.todo.map(taskCardHTML).join("");
     $("#col-doing").innerHTML = cols.doing.map(taskCardHTML).join("");
     $("#col-done").innerHTML = cols.done.map(taskCardHTML).join("");
+    $("#col-finalized").innerHTML = cols.finalized.map(taskCardHTML).join("");
+    $("#col-canceled").innerHTML = cols.canceled.map(taskCardHTML).join("");
     $("#countTodo").textContent = cols.todo.length;
     $("#countDoing").textContent = cols.doing.length;
     $("#countDone").textContent = cols.done.length;
+    $("#countFinalized").textContent = cols.finalized.length;
+    $("#countCanceled").textContent = cols.canceled.length;
 
     $$(".task-card").forEach((card) => {
       card.addEventListener("click", () => openTaskModal(card.dataset.id));
@@ -205,8 +218,9 @@
       card.addEventListener("dragend", () => card.classList.remove("dragging"));
     });
 
-    emptyState.classList.toggle("hidden", tasks.length !== 0);
-    boardColumns.classList.toggle("hidden", tasks.length === 0);
+    const spaceTasks = tasks.filter((t) => (t.space || "todos") === currentSpace);
+    emptyState.classList.toggle("hidden", spaceTasks.length !== 0);
+    boardColumns.classList.toggle("hidden", spaceTasks.length === 0);
 
     updateCategoryOptions();
     updateTopStats();
@@ -231,16 +245,19 @@
     const prev = t.status;
     t.status = newStatus;
     t.updatedAt = Date.now();
-    if (newStatus === "done" && prev !== "done") t.completedAt = Date.now();
-    if (newStatus !== "done") t.completedAt = null;
+    const isCompleteStatus = newStatus === "done" || newStatus === "finalized";
+    const wasCompleteStatus = prev === "done" || prev === "finalized";
+    if (isCompleteStatus && !wasCompleteStatus) t.completedAt = Date.now();
+    if (!isCompleteStatus) t.completedAt = null;
     saveTasks();
     logActivity("status_change", id, { from: prev, to: newStatus, title: t.title });
     renderBoard();
   }
 
   function updateTopStats() {
-    const total = tasks.length;
-    const done = tasks.filter((t) => t.status === "done").length;
+    const spaceTasks = tasks.filter((t) => (t.space || "todos") === currentSpace);
+    const total = spaceTasks.length;
+    const done = spaceTasks.filter((t) => t.status === "done" || t.status === "finalized").length;
     const rate = total ? Math.round((done / total) * 100) : 0;
     $("#statTotal").textContent = total;
     $("#statDone").textContent = done;
@@ -248,9 +265,10 @@
     $("#statStreak").textContent = computeStreak();
   }
 
-  function computeStreak() {
+  function computeStreak(scopeTasks) {
+    const source = scopeTasks || tasks;
     const doneDates = new Set(
-      tasks.filter((t) => t.completedAt).map((t) => new Date(t.completedAt).toISOString().slice(0, 10))
+      source.filter((t) => t.completedAt).map((t) => new Date(t.completedAt).toISOString().slice(0, 10))
     );
     let streak = 0;
     let d = new Date();
@@ -273,6 +291,7 @@
     form.reset();
     $("#taskStatus").value = "todo";
     $("#taskPriority").value = "medium";
+    $("#taskSpace").value = currentSpace;
     $("#attachmentList").innerHTML = "";
     $("#subtaskList").innerHTML = "";
     $("#commentList").innerHTML = "";
@@ -283,10 +302,12 @@
       if (!t) return;
       $("#taskId").value = t.id;
       $("#taskTitle").value = t.title;
+      $("#taskSpace").value = t.space || "todos";
       $("#taskStatus").value = t.status;
       $("#taskPriority").value = t.priority;
       $("#taskCategory").value = t.category || "";
       $("#taskDue").value = t.due || "";
+      $("#taskDueTime").value = t.dueTime || "";
       $("#taskDescription").value = t.description || "";
       $("#modalMeta").textContent = `Criada em ${new Date(t.createdAt).toLocaleDateString("pt-BR")}`;
       renderSubtasks(t.subtasks || []);
@@ -436,6 +457,54 @@
   $("#btnCloseLightbox").addEventListener("click", () => $("#lightbox").classList.add("hidden"));
   $("#lightbox").addEventListener("click", (e) => { if (e.target.id === "lightbox") $("#lightbox").classList.add("hidden"); });
 
+  // ---------- Google Calendar integration ----------
+  function getEventWindow() {
+    const dateVal = $("#taskDue").value;
+    if (!dateVal) { showToast("Defina uma data para usar a agenda."); return null; }
+    const timeVal = $("#taskDueTime").value || "09:00";
+    const start = new Date(`${dateVal}T${timeVal}:00`);
+    const end = new Date(start.getTime() + 60 * 60000);
+    return { start, end };
+  }
+  function toGCalStamp(d) { return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z"; }
+  function toIcsStamp(d) { return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z"; }
+
+  $("#btnGCal").addEventListener("click", () => {
+    const win = getEventWindow();
+    if (!win) return;
+    const title = $("#taskTitle").value.trim() || "Tarefa";
+    const details = $("#taskDescription").value.trim();
+    const url = new URL("https://calendar.google.com/calendar/render");
+    url.searchParams.set("action", "TEMPLATE");
+    url.searchParams.set("text", title);
+    url.searchParams.set("dates", `${toGCalStamp(win.start)}/${toGCalStamp(win.end)}`);
+    if (details) url.searchParams.set("details", details);
+    window.open(url.toString(), "_blank", "noopener");
+  });
+
+  $("#btnIcs").addEventListener("click", () => {
+    const win = getEventWindow();
+    if (!win) return;
+    const title = $("#taskTitle").value.trim() || "Tarefa";
+    const details = ($("#taskDescription").value.trim() || "").replace(/\n/g, "\\n");
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Minhas Tarefas//PT-BR", "BEGIN:VEVENT",
+      `UID:${uid()}@minhas-tarefas`,
+      `DTSTAMP:${toIcsStamp(new Date())}`,
+      `DTSTART:${toIcsStamp(win.start)}`,
+      `DTEND:${toIcsStamp(win.end)}`,
+      `SUMMARY:${title}`,
+      details ? `DESCRIPTION:${details}` : "",
+      "END:VEVENT", "END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${title.replace(/[^\w\-]+/g, "_")}.ics`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
   // ---------- Save / Delete ----------
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -448,16 +517,19 @@
 
     const task = existing || { id, createdAt: now, completedAt: null };
     task.title = $("#taskTitle").value.trim();
+    task.space = $("#taskSpace").value;
     task.status = status;
     task.priority = $("#taskPriority").value;
     task.category = $("#taskCategory").value.trim();
     task.due = $("#taskDue").value || null;
+    task.dueTime = $("#taskDueTime").value || null;
     task.description = $("#taskDescription").value.trim();
     task.subtasks = workingSubtasks;
     task.comments = workingComments;
     task.updatedAt = now;
-    if (status === "done" && !task.completedAt) task.completedAt = now;
-    if (status !== "done") task.completedAt = null;
+    const isCompleteStatus = status === "done" || status === "finalized";
+    if (isCompleteStatus && !task.completedAt) task.completedAt = now;
+    if (!isCompleteStatus) task.completedAt = null;
 
     // persist attachments
     for (const rid of removedAttachmentIds) await AttachmentDB.remove(rid);
@@ -534,19 +606,24 @@
     const now = Date.now();
     const day = 86400000;
     const samples = [
-      { title: "Revisar relatório semanal", status: "todo", priority: "high", category: "Trabalho", due: todayISO(), description: "Conferir números antes de enviar." },
-      { title: "Ir à academia", status: "doing", priority: "medium", category: "Saúde", due: null, description: "Treino de pernas." },
-      { title: "Pagar contas", status: "todo", priority: "high", category: "Casa", due: todayISO(), description: "Água, luz e internet." },
-      { title: "Ler 20 páginas", status: "done", priority: "low", category: "Pessoal", due: null, description: "Livro atual: hábitos." },
-      { title: "Organizar fotos da viagem", status: "done", priority: "low", category: "Pessoal", due: null, description: "" },
+      { title: "Revisar relatório semanal", status: "todo", priority: "urgent", category: "Trabalho", space: "todos", due: todayISO(), description: "Conferir números antes de enviar." },
+      { title: "Ir à academia", status: "doing", priority: "medium", category: "Saúde", space: "extra", due: null, description: "Treino de pernas." },
+      { title: "Pagar contas", status: "todo", priority: "high", category: "Casa", space: "todos", due: todayISO(), description: "Água, luz e internet." },
+      { title: "Ler 20 páginas", status: "done", priority: "low", category: "Pessoal", space: "extra", due: null, description: "Livro atual: hábitos." },
+      { title: "Alinhamento com a Yás", status: "todo", priority: "high", category: "Gestão", space: "1on1", due: todayISO(), description: "Pauta: prioridades da semana e feedback." },
+      { title: "Entregar protótipo do dashboard", status: "doing", priority: "urgent", category: "Produto", space: "entregaveis", due: todayISO(), description: "Enviar link e evidências de teste." },
+      { title: "Ideias para o próximo sprint", status: "todo", priority: "low", category: "Pessoal", space: "anotacoes", due: null, description: "Brainstorm livre, revisar depois." },
+      { title: "Campanha antiga arquivada", status: "canceled", priority: "low", category: "Trabalho", space: "entregaveis", due: null, description: "Projeto descontinuado." },
+      { title: "Relatório trimestral", status: "finalized", priority: "medium", category: "Trabalho", space: "entregaveis", due: null, description: "Aprovado e enviado." },
     ];
     samples.forEach((s, i) => {
       const id = uid();
       const createdAt = now - (samples.length - i) * day;
-      const completedAt = s.status === "done" ? createdAt + 3600000 : null;
+      const isCompleteStatus = s.status === "done" || s.status === "finalized";
+      const completedAt = isCompleteStatus ? createdAt + 3600000 : null;
       tasks.unshift({
-        id, title: s.title, status: s.status, priority: s.priority, category: s.category,
-        due: s.due, description: s.description, subtasks: [], comments: [],
+        id, title: s.title, status: s.status, priority: s.priority, category: s.category, space: s.space,
+        due: s.due, dueTime: null, description: s.description, subtasks: [], comments: [],
         createdAt, updatedAt: createdAt, completedAt, attachmentCount: 0,
       });
       logActivity("created", id, { title: s.title });
@@ -584,19 +661,21 @@
   async function renderDashboard(themeOnly) {
     const range = Number($("#metricsRange").value || 30);
     const rangeStart = Date.now() - range * 86400000;
+    const spaceFilter = $("#metricsSpace").value;
+    const scoped = spaceFilter ? tasks.filter((t) => (t.space || "todos") === spaceFilter) : tasks;
 
-    const total = tasks.length;
-    const done = tasks.filter((t) => t.status === "done").length;
+    const total = scoped.length;
+    const done = scoped.filter((t) => t.status === "done" || t.status === "finalized").length;
     const rate = total ? Math.round((done / total) * 100) : 0;
     const attCount = await AttachmentDB.countAll();
 
     $("#mTotal").textContent = total;
     $("#mDone").textContent = done;
     $("#mRate").textContent = rate + "%";
-    $("#mStreak").textContent = computeStreak();
+    $("#mStreak").textContent = computeStreak(scoped);
     $("#mAttachments").textContent = attCount;
 
-    const completedWithTime = tasks.filter((t) => t.completedAt && t.createdAt);
+    const completedWithTime = scoped.filter((t) => t.completedAt && t.createdAt);
     if (completedWithTime.length) {
       const avgMs = completedWithTime.reduce((sum, t) => sum + (t.completedAt - t.createdAt), 0) / completedWithTime.length;
       const hours = avgMs / 3600000;
@@ -618,7 +697,7 @@
     }
     const createdByDay = Object.fromEntries(days.map((d) => [d, 0]));
     const doneByDay = Object.fromEntries(days.map((d) => [d, 0]));
-    tasks.forEach((t) => {
+    scoped.forEach((t) => {
       const cd = new Date(t.createdAt).toISOString().slice(0, 10);
       if (cd in createdByDay) createdByDay[cd]++;
       if (t.completedAt) {
@@ -640,36 +719,46 @@
     });
 
     // Status distribution
-    const statusCounts = { todo: 0, doing: 0, done: 0 };
-    tasks.forEach((t) => statusCounts[t.status]++);
+    const statusCounts = { todo: 0, doing: 0, done: 0, finalized: 0, canceled: 0 };
+    scoped.forEach((t) => statusCounts[t.status]++);
     charts.status = new Chart($("#chartStatus"), {
       type: "doughnut",
       data: {
-        labels: ["A fazer", "Em andamento", "Concluída"],
-        datasets: [{ data: [statusCounts.todo, statusCounts.doing, statusCounts.done], backgroundColor: [c.palette[3], c.palette[2], c.palette[1]] }],
+        labels: ["A fazer", "Em andamento", "Concluída", "Finalizada", "Cancelada"],
+        datasets: [{ data: [statusCounts.todo, statusCounts.doing, statusCounts.done, statusCounts.finalized, statusCounts.canceled], backgroundColor: [c.palette[3], c.palette[2], c.palette[1], c.palette[5], c.palette[4]] }],
       },
       options: { responsive: true, plugins: { legend: { position: "bottom" } } },
     });
 
     // Priority breakdown
-    const prCounts = { high: 0, medium: 0, low: 0 };
-    tasks.forEach((t) => prCounts[t.priority]++);
+    const prCounts = { urgent: 0, high: 0, medium: 0, low: 0 };
+    scoped.forEach((t) => prCounts[t.priority]++);
     charts.priority = new Chart($("#chartPriority"), {
       type: "bar",
       data: {
-        labels: ["Alta", "Média", "Baixa"],
-        datasets: [{ label: "Tarefas", data: [prCounts.high, prCounts.medium, prCounts.low], backgroundColor: [c.palette[3], c.palette[2], c.palette[1]] }],
+        labels: ["Urgente", "Alta", "Média", "Baixa"],
+        datasets: [{ label: "Tarefas", data: [prCounts.urgent, prCounts.high, prCounts.medium, prCounts.low], backgroundColor: ["#ff2d55", c.palette[3], c.palette[2], c.palette[1]] }],
       },
       options: { responsive: true, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } },
     });
 
     // By category
     const catCounts = {};
-    tasks.forEach((t) => { const k = t.category || "Sem categoria"; catCounts[k] = (catCounts[k] || 0) + 1; });
+    scoped.forEach((t) => { const k = t.category || "Sem categoria"; catCounts[k] = (catCounts[k] || 0) + 1; });
     const catLabels = Object.keys(catCounts);
     charts.category = new Chart($("#chartCategory"), {
       type: "pie",
       data: { labels: catLabels, datasets: [{ data: catLabels.map((k) => catCounts[k]), backgroundColor: catLabels.map((_, i) => c.palette[i % c.palette.length]) }] },
+      options: { responsive: true, plugins: { legend: { position: "bottom" } } },
+    });
+
+    // By space/tab
+    const spaceCounts = {};
+    scoped.forEach((t) => { const k = SPACE_LABEL[t.space || "todos"] || "Outro"; spaceCounts[k] = (spaceCounts[k] || 0) + 1; });
+    const spaceLabels = Object.keys(spaceCounts);
+    charts.space = new Chart($("#chartSpace"), {
+      type: "pie",
+      data: { labels: spaceLabels, datasets: [{ data: spaceLabels.map((k) => spaceCounts[k]), backgroundColor: spaceLabels.map((_, i) => c.palette[i % c.palette.length]) }] },
       options: { responsive: true, plugins: { legend: { position: "bottom" } } },
     });
 
@@ -694,8 +783,10 @@
   }
 
   $("#metricsRange").addEventListener("change", () => renderDashboard());
+  $("#metricsSpace").addEventListener("change", () => renderDashboard());
 
   // ---------- Init ----------
   setBoardMode("board");
+  $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
   renderBoard();
 })();

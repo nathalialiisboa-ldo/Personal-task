@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Minhas Tarefas — Painel Diário</title>
+<meta name="description" content="Gerenciador interativo de tarefas diárias com evidências e métricas de uso." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✅</text></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-icon">✅</span>
+      <span class="brand-name">Minhas Tarefas</span>
+    </div>
+
+    <button id="btnNewTask" class="btn btn-primary btn-block">+ Nova tarefa</button>
+
+    <nav class="nav-views">
+      <button class="nav-item active" data-view="board">📋 Painel</button>
+      <button class="nav-item" data-view="dashboard">📊 Métricas</button>
+    </nav>
+
+    <div class="sidebar-section">
+      <h4>Status</h4>
+      <label class="check-filter"><input type="checkbox" value="todo" checked> A fazer</label>
+      <label class="check-filter"><input type="checkbox" value="doing" checked> Em andamento</label>
+      <label class="check-filter"><input type="checkbox" value="done" checked> Concluída</label>
+    </div>
+
+    <div class="sidebar-section">
+      <h4>Prioridade</h4>
+      <label class="check-filter"><input type="checkbox" value="high" checked> Alta</label>
+      <label class="check-filter"><input type="checkbox" value="medium" checked> Média</label>
+      <label class="check-filter"><input type="checkbox" value="low" checked> Baixa</label>
+    </div>
+
+    <div class="sidebar-section">
+      <h4>Categoria</h4>
+      <select id="categoryFilter">
+        <option value="">Todas</option>
+      </select>
+    </div>
+
+    <div class="sidebar-footer">
+      <button id="btnTheme" class="btn btn-ghost btn-block">🌓 Tema</button>
+      <button id="btnExport" class="btn btn-ghost btn-block">⬇️ Exportar dados</button>
+      <label class="btn btn-ghost btn-block" for="importFile">⬆️ Importar dados</label>
+      <input type="file" id="importFile" accept="application/json" hidden />
+      <button id="btnSeed" class="btn btn-ghost btn-block">✨ Dados de exemplo</button>
+      <button id="btnClearAll" class="btn btn-danger-ghost btn-block">🗑️ Limpar tudo</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- BOARD VIEW -->
+    <section id="view-board" class="view active">
+      <header class="topbar">
+        <div class="search-wrap">
+          <input type="search" id="searchInput" placeholder="Buscar tarefas..." />
+        </div>
+        <div class="topbar-stats">
+          <div class="mini-stat"><span id="statTotal">0</span><small>Total</small></div>
+          <div class="mini-stat"><span id="statDone">0</span><small>Concluídas</small></div>
+          <div class="mini-stat"><span id="statRate">0%</span><small>Taxa</small></div>
+          <div class="mini-stat"><span id="statStreak">0</span><small>Sequência 🔥</small></div>
+        </div>
+        <select id="sortSelect">
+          <option value="createdDesc">Mais recentes</option>
+          <option value="createdAsc">Mais antigas</option>
+          <option value="dueAsc">Prazo mais próximo</option>
+          <option value="priority">Prioridade</option>
+          <option value="alpha">A–Z</option>
+        </select>
+        <div class="view-toggle">
+          <button id="btnViewBoard" class="toggle-btn active" title="Colunas">▤</button>
+          <button id="btnViewList" class="toggle-btn" title="Lista">☰</button>
+        </div>
+      </header>
+
+      <div id="boardColumns" class="board-columns">
+        <div class="column" data-status="todo">
+          <div class="column-header"><span>A fazer</span><em id="countTodo">0</em></div>
+          <div class="column-body" id="col-todo"></div>
+        </div>
+        <div class="column" data-status="doing">
+          <div class="column-header"><span>Em andamento</span><em id="countDoing">0</em></div>
+          <div class="column-body" id="col-doing"></div>
+        </div>
+        <div class="column" data-status="done">
+          <div class="column-header"><span>Concluída</span><em id="countDone">0</em></div>
+          <div class="column-body" id="col-done"></div>
+        </div>
+      </div>
+
+      <div id="emptyState" class="empty-state hidden">
+        <p>Nenhuma tarefa por aqui ainda.</p>
+        <button id="btnEmptyAdd" class="btn btn-primary">Criar minha primeira tarefa</button>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section id="view-dashboard" class="view">
+      <header class="topbar">
+        <h2>Métricas de uso</h2>
+        <select id="metricsRange">
+          <option value="7">Últimos 7 dias</option>
+          <option value="14">Últimos 14 dias</option>
+          <option value="30" selected>Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
+        </select>
+      </header>
+
+      <div class="cards-grid">
+        <div class="stat-card"><div class="stat-value" id="mTotal">0</div><div class="stat-label">Tarefas totais</div></div>
+        <div class="stat-card"><div class="stat-value" id="mDone">0</div><div class="stat-label">Concluídas</div></div>
+        <div class="stat-card"><div class="stat-value" id="mRate">0%</div><div class="stat-label">Taxa de conclusão</div></div>
+        <div class="stat-card"><div class="stat-value" id="mAvgTime">–</div><div class="stat-label">Tempo médio p/ concluir</div></div>
+        <div class="stat-card"><div class="stat-value" id="mStreak">0</div><div class="stat-label">Sequência atual (dias)</div></div>
+        <div class="stat-card"><div class="stat-value" id="mAttachments">0</div><div class="stat-label">Evidências anexadas</div></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Atividade diária</h3>
+          <canvas id="chartActivity" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Status das tarefas</h3>
+          <canvas id="chartStatus" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Por prioridade</h3>
+          <canvas id="chartPriority" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Por categoria</h3>
+          <canvas id="chartCategory" height="220"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card wide">
+        <h3>Atividade recente</h3>
+        <ul id="activityLog" class="activity-log"></ul>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Task Modal -->
+<div id="taskModal" class="modal-overlay hidden">
+  <div class="modal">
+    <button class="modal-close" id="btnCloseModal">✕</button>
+    <form id="taskForm">
+      <input type="hidden" id="taskId" />
+
+      <div class="modal-header">
+        <input type="text" id="taskTitle" placeholder="Título da tarefa" required maxlength="120" />
+        <span class="badge" id="modalMeta"></span>
+      </div>
+
+      <div class="modal-grid">
+        <div class="field">
+          <label>Status</label>
+          <select id="taskStatus">
+            <option value="todo">A fazer</option>
+            <option value="doing">Em andamento</option>
+            <option value="done">Concluída</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Prioridade</label>
+          <select id="taskPriority">
+            <option value="low">Baixa</option>
+            <option value="medium" selected>Média</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Categoria</label>
+          <input type="text" id="taskCategory" placeholder="Ex: Trabalho, Casa..." list="categoryList" />
+          <datalist id="categoryList"></datalist>
+        </div>
+        <div class="field">
+          <label>Prazo</label>
+          <input type="date" id="taskDue" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Descrição</label>
+        <textarea id="taskDescription" rows="4" placeholder="Detalhes da tarefa..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Evidências / arquivos (fotos, PDFs, docs...)</label>
+        <div id="dropZone" class="drop-zone">
+          <p>Arraste arquivos aqui, cole uma imagem ou <label for="fileInput" class="link">selecione</label></p>
+          <input type="file" id="fileInput" multiple hidden />
+        </div>
+        <div id="attachmentList" class="attachment-list"></div>
+      </div>
+
+      <div class="field">
+        <label>Checklist / subtarefas</label>
+        <div id="subtaskList" class="subtask-list"></div>
+        <div class="subtask-add">
+          <input type="text" id="subtaskInput" placeholder="Adicionar subtarefa e pressionar Enter" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Comentários / notas de progresso</label>
+        <div id="commentList" class="comment-list"></div>
+        <div class="comment-add">
+          <input type="text" id="commentInput" placeholder="Escrever uma nota..." />
+          <button type="button" id="btnAddComment" class="btn btn-ghost">Adicionar</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnDeleteTask" class="btn btn-danger-ghost hidden">Excluir</button>
+        <div class="spacer"></div>
+        <button type="button" id="btnCancel" class="btn btn-ghost">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar tarefa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Lightbox for image preview -->
+<div id="lightbox" class="modal-overlay hidden">
+  <div class="lightbox-inner">
+    <button class="modal-close" id="btnCloseLightbox">✕</button>
+    <img id="lightboxImg" src="" alt="Evidência" />
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

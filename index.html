@@ -49,7 +49,6 @@
       <label class="check-filter"><input type="checkbox" value="todo" checked> A fazer</label>
       <label class="check-filter"><input type="checkbox" value="doing" checked> Em andamento</label>
       <label class="check-filter"><input type="checkbox" value="done" checked> Concluída</label>
-      <label class="check-filter"><input type="checkbox" value="finalized" checked> Finalizada</label>
       <label class="check-filter"><input type="checkbox" value="canceled" checked> Cancelada</label>
     </div>
 
@@ -120,10 +119,6 @@
         <div class="column" data-status="done">
           <div class="column-header"><span>Concluída</span><em id="countDone">0</em></div>
           <div class="column-body" id="col-done"></div>
-        </div>
-        <div class="column" data-status="finalized">
-          <div class="column-header"><span>Finalizada</span><em id="countFinalized">0</em></div>
-          <div class="column-body" id="col-finalized"></div>
         </div>
         <div class="column" data-status="canceled">
           <div class="column-header"><span>Cancelada</span><em id="countCanceled">0</em></div>
@@ -229,7 +224,6 @@
             <option value="todo">A fazer</option>
             <option value="doing">Em andamento</option>
             <option value="done">Concluída</option>
-            <option value="finalized">Finalizada</option>
             <option value="canceled">Cancelada</option>
           </select>
         </div>

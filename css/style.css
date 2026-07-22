@@ -292,7 +292,6 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .status-pill-todo { background: #8b8fa3; }
 .status-pill-doing { background: var(--warning); }
 .status-pill-done { background: var(--success); }
-.status-pill-finalized { background: var(--primary); }
 .status-pill-canceled { background: var(--danger); }
 .theme-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
 

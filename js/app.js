@@ -10,13 +10,18 @@
   const LS_THEME = "ptasks_theme_v1";
   const LS_VIEWMODE = "ptasks_viewmode_v1";
 
-  const STATUS_LABEL = { todo: "A fazer", doing: "Em andamento", done: "Concluída", finalized: "Finalizada", canceled: "Cancelada" };
+  const STATUS_LABEL = { todo: "A fazer", doing: "Em andamento", done: "Concluída", canceled: "Cancelada" };
   const PRIORITY_LABEL = { urgent: "Urgente", high: "Alta", medium: "Média", low: "Baixa" };
   const PRIORITY_RANK = { urgent: -1, high: 0, medium: 1, low: 2 };
   const SPACE_LABEL = { todos: "To do's", "1on1": "1:1 Yás", entregaveis: "Entregáveis", extra: "Atividades Extra", anotacoes: "Anotações" };
 
   // ---------- State ----------
   let tasks = loadJSON(LS_TASKS, []);
+  (function migrateFinalizedStatus() {
+    let changed = false;
+    tasks.forEach((t) => { if (t.status === "finalized") { t.status = "done"; changed = true; } });
+    if (changed) localStorage.setItem(LS_TASKS, JSON.stringify(tasks));
+  })();
   let activity = loadJSON(LS_ACTIVITY, []);
   let pendingAttachments = []; // {id, name, type, size, dataURL, file} staged for the open modal, not yet persisted until save
   let removedAttachmentIds = [];
@@ -116,7 +121,7 @@
   categoryFilter.addEventListener("change", renderBoard);
 
   function getActiveFilters() {
-    const statusBoxes = $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"], .check-filter input[value="finalized"], .check-filter input[value="canceled"]');
+    const statusBoxes = $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"], .check-filter input[value="canceled"]');
     const priorityBoxes = $$('.check-filter input[value="urgent"], .check-filter input[value="high"], .check-filter input[value="medium"], .check-filter input[value="low"]');
     return {
       statuses: statusBoxes.filter((b) => b.checked).map((b) => b.value),
@@ -179,7 +184,7 @@
     const due = new Date(task.due + "T23:59:59");
     const now = new Date();
     const diffDays = Math.ceil((due - now) / 86400000);
-    const isOpenStatus = task.status !== "done" && task.status !== "finalized" && task.status !== "canceled";
+    const isOpenStatus = task.status !== "done" && task.status !== "canceled";
     let cls = "";
     if (isOpenStatus && diffDays < 0) cls = "due-overdue";
     else if (isOpenStatus && diffDays <= 1) cls = "due-soon";
@@ -237,18 +242,16 @@
 
   function renderBoard() {
     const list = filteredSortedTasks();
-    const cols = { todo: [], doing: [], done: [], finalized: [], canceled: [] };
+    const cols = { todo: [], doing: [], done: [], canceled: [] };
     list.forEach((t) => cols[t.status] && cols[t.status].push(t));
 
     $("#col-todo").innerHTML = cols.todo.map(taskCardHTML).join("");
     $("#col-doing").innerHTML = cols.doing.map(taskCardHTML).join("");
     $("#col-done").innerHTML = cols.done.map(taskCardHTML).join("");
-    $("#col-finalized").innerHTML = cols.finalized.map(taskCardHTML).join("");
     $("#col-canceled").innerHTML = cols.canceled.map(taskCardHTML).join("");
     $("#countTodo").textContent = cols.todo.length;
     $("#countDoing").textContent = cols.doing.length;
     $("#countDone").textContent = cols.done.length;
-    $("#countFinalized").textContent = cols.finalized.length;
     $("#countCanceled").textContent = cols.canceled.length;
 
     $$(".task-card").forEach((card) => {
@@ -273,7 +276,7 @@
   const closedThemeGroups = new Set();
   function themeRowHTML(t) {
     const due = dueChipInfo(t);
-    const isComplete = t.status === "done" || t.status === "finalized";
+    const isComplete = t.status === "done";
     return `
     <div class="theme-row ${isComplete ? "is-complete" : ""}" data-id="${t.id}" draggable="true">
       <span class="theme-row-handle" title="Arraste para mover de tema">⠿</span>
@@ -324,7 +327,7 @@
 
     themeListEl.innerHTML = order.map((theme) => {
       const items = groups[theme];
-      const doneCount = items.filter((t) => t.status === "done" || t.status === "finalized").length;
+      const doneCount = items.filter((t) => t.status === "done").length;
       const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
       const isOpen = !closedThemeGroups.has(theme);
       const isEmpty = items.length === 0;
@@ -370,7 +373,7 @@
         const id = btn.closest(".theme-row").dataset.id;
         const t = tasks.find((x) => x.id === id);
         if (!t) return;
-        const nowComplete = t.status === "done" || t.status === "finalized";
+        const nowComplete = t.status === "done";
         changeTaskStatus(id, nowComplete ? "todo" : "done");
       });
     });
@@ -464,8 +467,8 @@
     const prev = t.status;
     t.status = newStatus;
     t.updatedAt = Date.now();
-    const isCompleteStatus = newStatus === "done" || newStatus === "finalized";
-    const wasCompleteStatus = prev === "done" || prev === "finalized";
+    const isCompleteStatus = newStatus === "done";
+    const wasCompleteStatus = prev === "done";
     if (isCompleteStatus && !wasCompleteStatus) t.completedAt = Date.now();
     if (!isCompleteStatus) t.completedAt = null;
     saveTasks();
@@ -476,7 +479,7 @@
   function updateTopStats() {
     const spaceTasks = tasks.filter((t) => (t.space || "todos") === currentSpace);
     const total = spaceTasks.length;
-    const done = spaceTasks.filter((t) => t.status === "done" || t.status === "finalized").length;
+    const done = spaceTasks.filter((t) => t.status === "done").length;
     const rate = total ? Math.round((done / total) * 100) : 0;
     $("#statTotal").textContent = total;
     $("#statDone").textContent = done;
@@ -746,7 +749,7 @@
     task.subtasks = workingSubtasks;
     task.comments = workingComments;
     task.updatedAt = now;
-    const isCompleteStatus = status === "done" || status === "finalized";
+    const isCompleteStatus = status === "done";
     if (isCompleteStatus && !task.completedAt) task.completedAt = now;
     if (!isCompleteStatus) task.completedAt = null;
 
@@ -833,12 +836,12 @@
       { title: "Entregar protótipo do dashboard", status: "doing", priority: "urgent", category: "Produto", space: "entregaveis", due: todayISO(), description: "Enviar link e evidências de teste." },
       { title: "Ideias para o próximo sprint", status: "todo", priority: "low", category: "Pessoal", space: "anotacoes", due: null, description: "Brainstorm livre, revisar depois." },
       { title: "Campanha antiga arquivada", status: "canceled", priority: "low", category: "Trabalho", space: "entregaveis", due: null, description: "Projeto descontinuado." },
-      { title: "Relatório trimestral", status: "finalized", priority: "medium", category: "Trabalho", space: "entregaveis", due: null, description: "Aprovado e enviado." },
+      { title: "Relatório trimestral", status: "done", priority: "medium", category: "Trabalho", space: "entregaveis", due: null, description: "Aprovado e enviado." },
     ];
     samples.forEach((s, i) => {
       const id = uid();
       const createdAt = now - (samples.length - i) * day;
-      const isCompleteStatus = s.status === "done" || s.status === "finalized";
+      const isCompleteStatus = s.status === "done";
       const completedAt = isCompleteStatus ? createdAt + 3600000 : null;
       tasks.unshift({
         id, title: s.title, status: s.status, priority: s.priority, category: s.category, space: s.space,
@@ -884,7 +887,7 @@
     const scoped = spaceFilter ? tasks.filter((t) => (t.space || "todos") === spaceFilter) : tasks;
 
     const total = scoped.length;
-    const done = scoped.filter((t) => t.status === "done" || t.status === "finalized").length;
+    const done = scoped.filter((t) => t.status === "done").length;
     const rate = total ? Math.round((done / total) * 100) : 0;
     const attCount = await AttachmentDB.countAll();
 
@@ -938,13 +941,13 @@
     });
 
     // Status distribution
-    const statusCounts = { todo: 0, doing: 0, done: 0, finalized: 0, canceled: 0 };
+    const statusCounts = { todo: 0, doing: 0, done: 0, canceled: 0 };
     scoped.forEach((t) => statusCounts[t.status]++);
     charts.status = new Chart($("#chartStatus"), {
       type: "doughnut",
       data: {
-        labels: ["A fazer", "Em andamento", "Concluída", "Finalizada", "Cancelada"],
-        datasets: [{ data: [statusCounts.todo, statusCounts.doing, statusCounts.done, statusCounts.finalized, statusCounts.canceled], backgroundColor: [c.palette[3], c.palette[2], c.palette[1], c.palette[5], c.palette[4]] }],
+        labels: ["A fazer", "Em andamento", "Concluída", "Cancelada"],
+        datasets: [{ data: [statusCounts.todo, statusCounts.doing, statusCounts.done, statusCounts.canceled], backgroundColor: [c.palette[3], c.palette[2], c.palette[1], c.palette[4]] }],
       },
       options: { responsive: true, plugins: { legend: { position: "bottom" } } },
     });

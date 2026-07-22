@@ -276,7 +276,8 @@
     const due = dueChipInfo(t);
     const isComplete = t.status === "done" || t.status === "finalized";
     return `
-    <div class="theme-row ${isComplete ? "is-complete" : ""}" data-id="${t.id}">
+    <div class="theme-row ${isComplete ? "is-complete" : ""}" data-id="${t.id}" draggable="true">
+      <span class="theme-row-handle" title="Arraste para mover de tema">⠿</span>
       <button type="button" class="theme-row-status ${isComplete ? "is-complete" : ""}" title="Marcar como concluída">${isComplete ? "✓" : ""}</button>
       <span class="theme-row-title">${escapeHtml(t.title)}</span>
       <span class="theme-row-meta">
@@ -284,8 +285,25 @@
         <span class="status-pill status-pill-${t.status}">${STATUS_LABEL[t.status]}</span>
         ${due ? `<span class="chip ${due.cls}">📅 ${due.text}</span>` : ""}
         ${t.attachmentCount ? `<span class="chip-att">📎 ${t.attachmentCount}</span>` : ""}
+        <select class="theme-row-movesel" title="Mover para outro tema">
+          <option value="">↪ Mover...</option>
+        </select>
       </span>
     </div>`;
+  }
+
+  function moveTaskToTheme(id, newTheme) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    const oldTheme = t.category || "Sem tema";
+    if (oldTheme === newTheme) return;
+    t.category = newTheme === "Sem tema" ? "" : newTheme;
+    t.updatedAt = Date.now();
+    saveTasks();
+    logActivity("updated", id, { title: t.title });
+    closedThemeGroups.delete(newTheme);
+    showToast(`Tarefa movida para "${newTheme}"`);
+    renderBoard();
   }
 
   function renderThemeList(list) {
@@ -330,6 +348,19 @@
         const key = el.dataset.theme;
         if (el.open) closedThemeGroups.delete(key); else closedThemeGroups.add(key);
       });
+      el.addEventListener("dragover", (e) => { e.preventDefault(); el.classList.add("drop-target"); });
+      el.addEventListener("dragleave", () => el.classList.remove("drop-target"));
+      el.addEventListener("drop", (e) => {
+        e.preventDefault();
+        el.classList.remove("drop-target");
+        const dragging = $(".theme-row.dragging");
+        if (!dragging) return;
+        moveTaskToTheme(dragging.dataset.id, el.dataset.theme);
+      });
+    });
+    $$(".theme-row").forEach((row) => {
+      row.addEventListener("dragstart", () => row.classList.add("dragging"));
+      row.addEventListener("dragend", () => row.classList.remove("dragging"));
     });
     $$(".theme-row-title, .theme-row-meta").forEach((el) => {
       el.addEventListener("click", () => openTaskModal(el.closest(".theme-row").dataset.id));
@@ -342,6 +373,22 @@
         if (!t) return;
         const nowComplete = t.status === "done" || t.status === "finalized";
         changeTaskStatus(id, nowComplete ? "todo" : "done");
+      });
+    });
+    $$(".theme-row-movesel").forEach((sel) => {
+      const row = sel.closest(".theme-row");
+      const ownTheme = row.closest(".theme-group").dataset.theme;
+      order.filter((name) => name !== ownTheme).forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("click", (e) => e.stopPropagation());
+      sel.addEventListener("mousedown", (e) => e.stopPropagation());
+      sel.addEventListener("change", (e) => {
+        e.stopPropagation();
+        if (sel.value) moveTaskToTheme(row.dataset.id, sel.value);
       });
     });
 

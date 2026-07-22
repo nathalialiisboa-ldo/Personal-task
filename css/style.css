@@ -272,11 +272,19 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .theme-group-count { color: var(--text-muted); font-size: .78rem; }
 .theme-group-progress { display: inline-block; width: 90px; }
 .theme-rows { display: flex; flex-direction: column; }
+.theme-group.drop-target { outline: 2px dashed var(--primary); outline-offset: -2px; background: var(--primary-soft); }
 .theme-row {
   display: flex; align-items: center; gap: 12px; padding: 10px 16px; cursor: pointer;
   border-top: 1px solid var(--border); transition: background .12s ease;
 }
 .theme-row:hover { background: var(--primary-soft); }
+.theme-row.dragging { opacity: .4; }
+.theme-row-handle { flex-shrink: 0; color: var(--text-muted); cursor: grab; font-size: .9rem; }
+.theme-row-handle:active { cursor: grabbing; }
+.theme-row-movesel {
+  width: auto; background: var(--bg); border: 1px solid var(--border); color: var(--text-muted);
+  font-size: .7rem; padding: 3px 6px; border-radius: 999px; cursor: pointer;
+}
 .theme-row-status { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: .7rem; background: var(--bg); }
 .theme-row-status.is-complete { background: var(--success); border-color: var(--success); color: #fff; }
 .theme-row-title { flex: 1; min-width: 0; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -86,34 +86,23 @@ function levelTaskRowHTML(task) {
     <button type="button" class="theme-row-status ${isDone ? "is-complete" : ""}" title="Marcar como concluída">${isDone ? "✓" : ""}</button>
     <span class="entrega-task-name">${escapeHtmlNotas(task.name)}</span>
     <span class="entrega-task-meta">
+      <span class="nota-tag">Nota ${task.nota}</span>
       ${task.due ? `<span class="chip">📅 ${task.due}</span>` : ""}
     </span>
   </div>`;
 }
 
 function deliverableCardHTML(dlv, allTasks) {
-  const tasksForDlv = allTasks.filter((t) => t.deliverableId === dlv.id);
+  const tasksForDlv = allTasks
+    .filter((t) => t.deliverableId === dlv.id)
+    .slice()
+    .sort((a, b) => a.nota - b.nota || b.createdAt - a.createdAt);
   const nota = computeNota(tasksForDlv);
   const progress = computeProgressToNext(tasksForDlv, nota);
 
-  const levelsHTML = [2, 3, 4, 5].map((lvl) => {
-    const levelTasks = tasksForDlv.filter((t) => t.nota === lvl);
-    const achieved = nota >= lvl;
-    const doneCount = levelTasks.filter((t) => t.status === "concluida").length;
-    return `
-    <details class="nota-level ${achieved ? "achieved" : ""}" ${lvl === nota + 1 ? "open" : ""}>
-      <summary class="nota-level-header">
-        <span class="chevron">▶</span>
-        <span class="nota-level-badge">Nota ${lvl}</span>
-        <span class="nota-level-text">${escapeHtmlNotas(dlv.levels[lvl])}</span>
-        <span class="nota-level-count">${doneCount}/${levelTasks.length}</span>
-      </summary>
-      <div class="nota-level-tasks">
-        ${levelTasks.map(levelTaskRowHTML).join("") || '<div class="entrega-empty">Nenhuma tarefa cadastrada ainda.</div>'}
-        <button type="button" class="btn btn-ghost entrega-add-task" data-deliverable="${dlv.id}" data-nota="${lvl}">+ Adicionar tarefa</button>
-      </div>
-    </details>`;
-  }).join("");
+  const criteriaHTML = [2, 3, 4, 5].map((lvl) => `
+    <li><b>Nota ${lvl}${nota >= lvl ? " ✓" : ""}:</b> ${escapeHtmlNotas(dlv.levels[lvl])}</li>
+  `).join("");
 
   return `
   <div class="nota-card accent-${dlv.accent}">
@@ -125,8 +114,17 @@ function deliverableCardHTML(dlv, allTasks) {
     ${progress ? (progress.total > 0 ? `
       <div class="nota-progress-label">Rumo à nota ${nota + 1}: ${progress.done}/${progress.total} tarefas</div>
       <div class="progress-bar"><div class="progress-bar-fill" style="width:${progress.pct}%"></div></div>
-    ` : `<div class="nota-progress-label">Rumo à nota ${nota + 1}: cadastre tarefas no nível ${nota + 1} abaixo</div>`) : `<div class="nota-progress-label">Nota máxima atingida 🎉</div>`}
-    <div class="nota-levels">${levelsHTML}</div>
+    ` : `<div class="nota-progress-label">Rumo à nota ${nota + 1}: cadastre uma tarefa marcada como "Nota ${nota + 1}"</div>`) : `<div class="nota-progress-label">Nota máxima atingida 🎉</div>`}
+
+    <details class="nota-criteria-ref">
+      <summary>Ver critérios de cada nota</summary>
+      <ul>${criteriaHTML}</ul>
+    </details>
+
+    <div class="entrega-task-list">
+      ${tasksForDlv.map(levelTaskRowHTML).join("") || '<div class="entrega-empty">Nenhuma tarefa cadastrada ainda.</div>'}
+    </div>
+    <button type="button" class="btn btn-ghost entrega-add-task" data-deliverable="${dlv.id}">+ Adicionar tarefa</button>
   </div>`;
 }
 
@@ -137,7 +135,7 @@ function renderNotasView() {
   grid.innerHTML = DELIVERABLES.map((dlv) => deliverableCardHTML(dlv, allTasks)).join("");
 
   grid.querySelectorAll(".entrega-add-task").forEach((btn) => {
-    btn.addEventListener("click", () => openEntregaTaskModal(null, btn.dataset.deliverable, Number(btn.dataset.nota)));
+    btn.addEventListener("click", () => openEntregaTaskModal(null, btn.dataset.deliverable));
   });
   grid.querySelectorAll(".entrega-task-row").forEach((row) => {
     row.addEventListener("click", (e) => {

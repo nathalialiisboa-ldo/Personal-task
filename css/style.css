@@ -371,34 +371,24 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .nota-badge small { font-size: .7rem; font-weight: 600; opacity: .7; }
 .nota-level1-text { font-size: .78rem; color: var(--text-muted); margin: 0; font-style: italic; }
 .nota-progress-label { font-size: .76rem; color: var(--text-muted); font-weight: 600; }
-.nota-levels { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
-.nota-level { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-.nota-level.achieved { border-color: var(--success); }
-.nota-level-header { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; list-style: none; font-size: .82rem; }
-.nota-level-header::-webkit-details-marker { display: none; }
-.nota-level-header .chevron { color: var(--text-muted); transition: transform .15s ease; font-size: .7rem; }
-.nota-level[open] .nota-level-header .chevron { transform: rotate(90deg); }
-.nota-level-badge { flex-shrink: 0; background: var(--border); color: var(--text); font-weight: 700; font-size: .68rem; padding: 2px 8px; border-radius: 999px; }
-.nota-level.achieved .nota-level-badge { background: var(--success); color: #fff; }
-.nota-level-text { flex: 1; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nota-level-count { flex-shrink: 0; font-size: .7rem; color: var(--text-muted); }
-.nota-level-tasks { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); }
-.entrega-task-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: var(--radius-sm); cursor: pointer; font-size: .82rem; }
+
+.nota-criteria-ref { font-size: .76rem; color: var(--text-muted); margin-top: 2px; }
+.nota-criteria-ref summary { cursor: pointer; font-weight: 600; list-style: none; }
+.nota-criteria-ref summary::-webkit-details-marker { display: none; }
+.nota-criteria-ref summary::before { content: "▶ "; font-size: .65rem; }
+.nota-criteria-ref[open] summary::before { content: "▼ "; }
+.nota-criteria-ref ul { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+.entrega-task-list { display: flex; flex-direction: column; margin-top: 4px; }
+.entrega-task-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-radius: var(--radius-sm); cursor: pointer; font-size: .84rem; border-top: 1px solid var(--border); }
+.entrega-task-row:first-child { border-top: none; }
 .entrega-task-row:hover { background: var(--primary-soft); }
 .entrega-task-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .entrega-task-row.is-complete .entrega-task-name { text-decoration: line-through; color: var(--text-muted); }
-.entrega-task-meta { flex-shrink: 0; font-size: .7rem; color: var(--text-muted); }
-.entrega-empty { font-size: .78rem; color: var(--text-muted); padding: 4px; }
-.entrega-add-task { align-self: flex-start; font-size: .76rem; padding: 5px 10px; margin-top: 2px; }
-.nota-task { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding-top: 8px; }
-.nota-task input[type="checkbox"] { margin-top: 3px; accent-color: var(--primary); flex-shrink: 0; }
-.nota-task-text { display: flex; flex-direction: column; gap: 2px; font-size: .82rem; }
-.nota-task-name { font-weight: 500; }
-.nota-task.done .nota-task-name { text-decoration: line-through; color: var(--text-muted); }
-.nota-task-desc { font-size: .72rem; color: var(--text-muted); }
-.nota-card-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
-.nota-dirty-flag { font-size: .7rem; color: var(--warning); font-weight: 600; }
-.nota-btn-sync, .nota-btn-download { font-size: .76rem; padding: 6px 12px; }
+.entrega-task-meta { flex-shrink: 0; display: flex; align-items: center; gap: 6px; font-size: .7rem; color: var(--text-muted); }
+.nota-tag { background: var(--border); color: var(--text-muted); font-weight: 700; font-size: .66rem; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.entrega-empty { font-size: .78rem; color: var(--text-muted); padding: 8px 4px; }
+.entrega-add-task { align-self: flex-start; font-size: .8rem; margin-top: 4px; }
 
 /* Dashboard */
 .cards-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 22px; }

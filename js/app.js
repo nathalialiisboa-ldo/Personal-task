@@ -290,9 +290,6 @@
         <span class="status-pill status-pill-${t.status}">${STATUS_LABEL[t.status]}</span>
         ${due ? `<span class="chip ${due.cls}">📅 ${due.text}</span>` : ""}
         ${t.attachmentCount ? `<span class="chip-att">📎 ${t.attachmentCount}</span>` : ""}
-        <select class="theme-row-movesel" title="Mover para outro tema">
-          <option value="">↪ Mover...</option>
-        </select>
       </span>
     </div>`;
   }
@@ -380,23 +377,6 @@
         changeTaskStatus(id, nowComplete ? "todo" : "done");
       });
     });
-    $$(".theme-row-movesel").forEach((sel) => {
-      const row = sel.closest(".theme-row");
-      const ownTheme = row.closest(".theme-group").dataset.theme;
-      order.filter((name) => name !== ownTheme).forEach((name) => {
-        const opt = document.createElement("option");
-        opt.value = name;
-        opt.textContent = name;
-        sel.appendChild(opt);
-      });
-      sel.addEventListener("click", (e) => e.stopPropagation());
-      sel.addEventListener("mousedown", (e) => e.stopPropagation());
-      sel.addEventListener("change", (e) => {
-        e.stopPropagation();
-        if (sel.value) moveTaskToTheme(row.dataset.id, sel.value);
-      });
-    });
-
     // Inline theme rename
     $$(".theme-group-title").forEach((input) => {
       input.addEventListener("click", (e) => e.stopPropagation());

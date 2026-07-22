@@ -159,6 +159,12 @@ body {
 }
 .nav-item:hover { background: var(--primary-soft); color: var(--primary); }
 .nav-item.active { background: var(--primary-soft); color: var(--primary); }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-group-label {
+  padding: 10px 12px 2px; font-size: .78rem; font-weight: 700; color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.nav-subitem { padding-left: 30px; font-size: .88rem; }
 
 .sidebar-section { border-top: 1px solid var(--border); padding-top: 14px; }
 .sidebar-section h4 { margin: 0 0 8px; font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }

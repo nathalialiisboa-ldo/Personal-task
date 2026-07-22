@@ -38,11 +38,13 @@
     <nav class="nav-views" id="spaceNav">
       <button class="nav-item active" data-view="board" data-space="todos">✅ To do's</button>
       <button class="nav-item" data-view="board" data-space="1on1">🗣️ 1:1 Yás</button>
-      <button class="nav-item" data-view="board" data-space="entregaveis">📦 Entregáveis</button>
+      <div class="nav-group">
+        <div class="nav-group-label">📦 Entregáveis</div>
+        <button class="nav-item nav-subitem" data-view="notas">🎯 Notas H2</button>
+      </div>
       <button class="nav-item" data-view="board" data-space="extra">➕ Atividades Extra</button>
       <button class="nav-item" data-view="board" data-space="anotacoes">📝 Anotações</button>
       <button class="nav-item" data-view="dashboard">📊 Métricas</button>
-      <button class="nav-item" data-view="notas">🎯 Notas H2</button>
     </nav>
 
     <div class="sidebar-section">
@@ -143,7 +145,6 @@
           <option value="">Todas as abas</option>
           <option value="todos">To do's</option>
           <option value="1on1">1:1 Yás</option>
-          <option value="entregaveis">Entregáveis</option>
           <option value="extra">Atividades Extra</option>
           <option value="anotacoes">Anotações</option>
         </select>
@@ -229,7 +230,6 @@
           <select id="taskSpace">
             <option value="todos">To do's</option>
             <option value="1on1">1:1 Yás</option>
-            <option value="entregaveis">Entregáveis</option>
             <option value="extra">Atividades Extra</option>
             <option value="anotacoes">Anotações</option>
           </select>

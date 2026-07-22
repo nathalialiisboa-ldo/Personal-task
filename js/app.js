@@ -73,6 +73,7 @@
         renderBoard();
       }
       if (view === "dashboard") renderDashboard();
+      if (view === "notas" && typeof renderNotasView === "function") renderNotasView();
     });
   });
 
@@ -99,6 +100,7 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toast.classList.add("hidden"), 2400);
   }
+  window.showToast = showToast;
 
   // ---------- View toggle (theme list / board) ----------
   const themeListEl = $("#themeList");

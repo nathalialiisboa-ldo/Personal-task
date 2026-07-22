@@ -8,6 +8,7 @@
   const LS_TASKS = "ptasks_tasks_v1";
   const LS_ACTIVITY = "ptasks_activity_v1";
   const LS_THEME = "ptasks_theme_v1";
+  const LS_VIEWMODE = "ptasks_viewmode_v1";
 
   const STATUS_LABEL = { todo: "A fazer", doing: "Em andamento", done: "Concluída", finalized: "Finalizada", canceled: "Cancelada" };
   const PRIORITY_LABEL = { urgent: "Urgente", high: "Alta", medium: "Média", low: "Baixa" };
@@ -20,7 +21,7 @@
   let pendingAttachments = []; // {id, name, type, size, dataURL, file} staged for the open modal, not yet persisted until save
   let removedAttachmentIds = [];
   let currentTaskId = null;
-  let boardMode = "board"; // board | list
+  let boardMode = localStorage.getItem(LS_VIEWMODE) || "theme"; // theme | board
   let currentSpace = "todos";
 
   function loadJSON(key, fallback) {
@@ -94,14 +95,18 @@
     toastTimer = setTimeout(() => toast.classList.add("hidden"), 2400);
   }
 
-  // ---------- View toggle (board/list) ----------
+  // ---------- View toggle (theme list / board) ----------
+  const themeListEl = $("#themeList");
   $("#btnViewBoard").addEventListener("click", () => setBoardMode("board"));
-  $("#btnViewList").addEventListener("click", () => setBoardMode("list"));
+  $("#btnViewTheme").addEventListener("click", () => setBoardMode("theme"));
   function setBoardMode(mode) {
     boardMode = mode;
+    localStorage.setItem(LS_VIEWMODE, mode);
     $("#btnViewBoard").classList.toggle("active", mode === "board");
-    $("#btnViewList").classList.toggle("active", mode === "list");
-    boardColumns.classList.toggle("list-mode", mode === "list");
+    $("#btnViewTheme").classList.toggle("active", mode === "theme");
+    boardColumns.classList.toggle("hidden", mode !== "board");
+    themeListEl.classList.toggle("hidden", mode !== "theme");
+    renderBoard();
   }
 
   // ---------- Filters wiring ----------
@@ -218,12 +223,84 @@
       card.addEventListener("dragend", () => card.classList.remove("dragging"));
     });
 
+    renderThemeList(list);
+
     const spaceTasks = tasks.filter((t) => (t.space || "todos") === currentSpace);
     emptyState.classList.toggle("hidden", spaceTasks.length !== 0);
-    boardColumns.classList.toggle("hidden", spaceTasks.length === 0);
+    boardColumns.classList.toggle("hidden", spaceTasks.length === 0 || boardMode !== "board");
+    themeListEl.classList.toggle("hidden", spaceTasks.length === 0 || boardMode !== "theme");
 
     updateCategoryOptions();
     updateTopStats();
+  }
+
+  const closedThemeGroups = new Set();
+  function themeRowHTML(t) {
+    const due = dueChipInfo(t);
+    const isComplete = t.status === "done" || t.status === "finalized";
+    return `
+    <div class="theme-row ${isComplete ? "is-complete" : ""}" data-id="${t.id}">
+      <button type="button" class="theme-row-status ${isComplete ? "is-complete" : ""}" title="Marcar como concluída">${isComplete ? "✓" : ""}</button>
+      <span class="theme-row-title">${escapeHtml(t.title)}</span>
+      <span class="theme-row-meta">
+        ${t.priority === "urgent" ? '<span class="priority-dot priority-urgent" title="Urgente"></span>' : ""}
+        <span class="status-pill status-pill-${t.status}">${STATUS_LABEL[t.status]}</span>
+        ${due ? `<span class="chip ${due.cls}">📅 ${due.text}</span>` : ""}
+        ${t.attachmentCount ? `<span class="chip-att">📎 ${t.attachmentCount}</span>` : ""}
+      </span>
+    </div>`;
+  }
+
+  function renderThemeList(list) {
+    const groups = {};
+    const order = [];
+    list.forEach((t) => {
+      const key = t.category || "Sem tema";
+      if (!(key in groups)) { groups[key] = []; order.push(key); }
+      groups[key].push(t);
+    });
+
+    if (order.length === 0) {
+      themeListEl.innerHTML = "";
+      return;
+    }
+
+    themeListEl.innerHTML = order.map((theme) => {
+      const items = groups[theme];
+      const doneCount = items.filter((t) => t.status === "done" || t.status === "finalized").length;
+      const pct = items.length ? Math.round((doneCount / items.length) * 100) : 0;
+      const isOpen = !closedThemeGroups.has(theme);
+      return `
+      <details class="theme-group" data-theme="${escapeHtml(theme)}" ${isOpen ? "open" : ""}>
+        <summary class="theme-group-header">
+          <span class="chevron">▶</span>
+          <span class="theme-group-title">${escapeHtml(theme)}</span>
+          <span class="theme-group-count">${doneCount}/${items.length} concluídas</span>
+          <span class="theme-group-progress progress-bar"><span class="progress-bar-fill" style="display:block;width:${pct}%"></span></span>
+        </summary>
+        <div class="theme-rows">${items.map(themeRowHTML).join("")}</div>
+      </details>`;
+    }).join("");
+
+    $$(".theme-group").forEach((el) => {
+      el.addEventListener("toggle", () => {
+        const key = el.dataset.theme;
+        if (el.open) closedThemeGroups.delete(key); else closedThemeGroups.add(key);
+      });
+    });
+    $$(".theme-row-title, .theme-row-meta").forEach((el) => {
+      el.addEventListener("click", () => openTaskModal(el.closest(".theme-row").dataset.id));
+    });
+    $$(".theme-row-status").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = btn.closest(".theme-row").dataset.id;
+        const t = tasks.find((x) => x.id === id);
+        if (!t) return;
+        const nowComplete = t.status === "done" || t.status === "finalized";
+        changeTaskStatus(id, nowComplete ? "todo" : "done");
+      });
+    });
   }
 
   // Drag & drop between columns
@@ -786,7 +863,6 @@
   $("#metricsSpace").addEventListener("change", () => renderDashboard());
 
   // ---------- Init ----------
-  setBoardMode("board");
   $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
-  renderBoard();
+  setBoardMode(boardMode);
 })();

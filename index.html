@@ -87,12 +87,12 @@
           <option value="alpha">A–Z</option>
         </select>
         <div class="view-toggle">
-          <button id="btnViewBoard" class="toggle-btn active" title="Colunas">▤</button>
-          <button id="btnViewList" class="toggle-btn" title="Lista">☰</button>
+          <button id="btnViewTheme" class="toggle-btn active" title="Por tema">☰ Por tema</button>
+          <button id="btnViewBoard" class="toggle-btn" title="Colunas">▤ Colunas</button>
         </div>
       </header>
 
-      <div id="boardColumns" class="board-columns">
+      <div id="boardColumns" class="board-columns hidden">
         <div class="column" data-status="todo">
           <div class="column-header"><span>A fazer</span><em id="countTodo">0</em></div>
           <div class="column-body" id="col-todo"></div>
@@ -114,6 +114,8 @@
           <div class="column-body" id="col-canceled"></div>
         </div>
       </div>
+
+      <div id="themeList" class="theme-list"></div>
 
       <div id="emptyState" class="empty-state hidden">
         <p>Nenhuma tarefa por aqui ainda.</p>

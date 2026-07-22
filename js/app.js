@@ -74,6 +74,7 @@
       }
       if (view === "dashboard") renderDashboard();
       if (view === "notas" && typeof renderNotasView === "function") renderNotasView();
+      if (view === "anotacoes" && typeof renderAnotacoesView === "function") renderAnotacoesView();
     });
   });
 

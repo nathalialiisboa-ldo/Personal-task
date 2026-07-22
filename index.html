@@ -43,7 +43,7 @@
         <button class="nav-item nav-subitem" data-view="notas">🎯 Notas H2</button>
       </div>
       <button class="nav-item" data-view="board" data-space="extra">➕ Atividades Extra</button>
-      <button class="nav-item" data-view="board" data-space="anotacoes">📝 Anotações</button>
+      <button class="nav-item" data-view="anotacoes">📝 Anotações</button>
       <button class="nav-item" data-view="dashboard">📊 Métricas</button>
     </nav>
 
@@ -146,7 +146,6 @@
           <option value="todos">To do's</option>
           <option value="1on1">1:1 Yás</option>
           <option value="extra">Atividades Extra</option>
-          <option value="anotacoes">Anotações</option>
         </select>
         <select id="metricsRange">
           <option value="7">Últimos 7 dias</option>
@@ -209,6 +208,19 @@
       <div id="notasGrid" class="notas-grid"></div>
     </section>
 
+    <!-- ANOTAÇÕES VIEW -->
+    <section id="view-anotacoes" class="view">
+      <header class="topbar">
+        <h2>📝 Anotações</h2>
+        <div class="search-wrap">
+          <input type="search" id="notesSearchInput" placeholder="Buscar anotações..." />
+        </div>
+        <div class="spacer"></div>
+        <button id="btnNewNote" class="btn btn-primary">+ Nova anotação</button>
+      </header>
+      <div id="notesGrid" class="notes-grid"></div>
+    </section>
+
   </main>
 </div>
 
@@ -231,7 +243,6 @@
             <option value="todos">To do's</option>
             <option value="1on1">1:1 Yás</option>
             <option value="extra">Atividades Extra</option>
-            <option value="anotacoes">Anotações</option>
           </select>
         </div>
         <div class="field">
@@ -374,6 +385,47 @@
   </div>
 </div>
 
+<!-- Note Modal -->
+<div id="noteModal" class="modal-overlay hidden">
+  <div class="modal modal-wide">
+    <button class="modal-close" id="btnCloseNoteModal">✕</button>
+
+    <div class="modal-header">
+      <input type="text" id="noteTitle" placeholder="Título da anotação" maxlength="140" />
+    </div>
+
+    <div class="note-toolbar">
+      <button type="button" class="note-tb-btn" data-cmd="bold" title="Negrito"><b>N</b></button>
+      <button type="button" class="note-tb-btn" data-cmd="italic" title="Itálico"><i>I</i></button>
+      <button type="button" class="note-tb-btn" data-cmd="underline" title="Sublinhado"><u>S</u></button>
+      <span class="note-tb-sep"></span>
+      <button type="button" class="note-tb-btn" data-cmd="insertUnorderedList" title="Lista com marcadores">• Lista</button>
+      <button type="button" class="note-tb-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+      <span class="note-tb-sep"></span>
+      <button type="button" class="note-tb-btn" data-cmd="formatBlock" data-value="H3" title="Título">Título</button>
+      <button type="button" class="note-tb-btn" data-cmd="formatBlock" data-value="P" title="Texto normal">Texto</button>
+      <span class="note-tb-sep"></span>
+      <span class="note-tb-colors" id="noteColorSwatches"></span>
+      <span class="note-tb-sep"></span>
+      <button type="button" class="note-tb-btn" data-cmd="removeFormat" title="Limpar formatação">Limpar</button>
+    </div>
+
+    <div id="noteEditor" class="note-editor" contenteditable="true" data-placeholder="Escreva sua anotação aqui..."></div>
+
+    <div class="field note-card-color-field">
+      <label>Cor do card</label>
+      <span class="note-card-colors" id="noteCardColorSwatches"></span>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" id="btnDeleteNote" class="btn btn-danger-ghost hidden">Excluir</button>
+      <div class="spacer"></div>
+      <span class="badge" id="noteModalMeta"></span>
+      <button type="button" id="btnCloseNote" class="btn btn-primary">Concluído</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lightbox for image preview -->
 <div id="lightbox" class="modal-overlay hidden">
   <div class="lightbox-inner">
@@ -387,6 +439,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="js/db.js"></script>
 <script src="js/entregaveis.js"></script>
+<script src="js/anotacoes.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

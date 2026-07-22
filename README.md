@@ -4,7 +4,7 @@ Aplicativo web interativo (HTML/CSS/JS puro, sem backend) para gerenciar tarefas
 
 ## Funcionalidades
 
-- **Abas/espaços**: To do's, 1:1 Yás, Entregáveis, Atividades Extra e Anotações — cada uma com seu próprio painel de tarefas.
+- **Abas/espaços de tarefas**: To do's, 1:1 Yás e Atividades Extra — cada uma com seu próprio painel de tarefas.
 - **CRUD completo de tarefas**: criar, editar, ver detalhes e excluir.
 - **Painel Kanban** (A fazer / Em andamento / Concluída / Cancelada) com drag-and-drop, ou visualização em lista agrupada por tema (com renomear, criar e mover tarefas entre temas).
 - **Classificação por prioridade**, incluindo **Urgente** (destaque visual em vermelho pulsante) além de Alta, Média e Baixa.
@@ -17,6 +17,7 @@ Aplicativo web interativo (HTML/CSS/JS puro, sem backend) para gerenciar tarefas
 - **Exportar/Importar dados** em JSON (inclui anexos) para backup ou migração.
 - **100% local**: os dados ficam no navegador (localStorage para tarefas/atividades, IndexedDB para os arquivos anexados). Nenhum dado é enviado a servidores.
 - **Notas H2 (entregáveis)**: cadastre e atualize tarefas livremente para cada um dos 3 entregáveis do semestre (nome, descrição, data, status), vinculando cada tarefa ao nível de nota que ela comprova. A nota prévia (1 a 5, cumulativa) é calculada automaticamente. Veja a seção [Notas dos Entregáveis](#notas-dos-entregáveis) abaixo.
+- **Anotações com formatação de texto**: bloco de notas separado das tarefas, com editor rico (negrito, itálico, sublinhado, cor do texto, listas com marcadores/numeradas, título) e cor de fundo por card. Veja [Anotações](#anotações) abaixo.
 
 ## Como usar
 
@@ -37,6 +38,7 @@ css/style.css             Estilos, temas e layout responsivo
 js/db.js                  Camada IndexedDB para anexos (fotos/arquivos/evidências)
 js/app.js                 Lógica da aplicação: CRUD, filtros, métricas e gráficos
 js/entregaveis.js         Lógica do painel de Notas H2: tarefas por entregável e cálculo de nota
+js/anotacoes.js           Lógica do bloco de notas com formatação de texto
 ```
 
 ## Notas dos Entregáveis
@@ -52,7 +54,18 @@ Desenvolvimento, Sustentação dos Programas), cada um com sua régua de nota (1
   concluídas** (níveis cumulativos: não dá pra pular do 2 pro 4 sem completar o 3).
 - Assim como o resto do app, os dados ficam salvos no navegador (localStorage).
 
+## Anotações
+
+A aba **"📝 Anotações"** é um bloco de notas independente do sistema de tarefas — sem checkbox
+nem status, só texto formatado.
+
+- **"+ Nova anotação"** abre o editor: título + área de texto com barra de formatação (negrito,
+  itálico, sublinhado, cor do texto, título, lista com marcadores/numerada, limpar formatação).
+- Escolha uma **cor de card** para organizar visualmente suas anotações.
+- Salva automaticamente ao fechar o editor — não precisa clicar em "salvar".
+- Busque pelo título ou conteúdo da anotação na barra de busca no topo da aba.
+
 ## Observações
 
 - Arquivos individuais anexados são limitados a 8MB para preservar performance do navegador.
-- Como os dados residem no navegador, use "Exportar dados" periodicamente para backup, ou para levar suas tarefas para outro dispositivo/navegador (via "Importar dados").
+- Como os dados residem no navegador, use "Exportar dados" periodicamente para backup, ou para levar suas tarefas para outro dispositivo/navegador (via "Importar dados"). As anotações não fazem parte desse export/import ainda — ficam salvas separadamente no navegador.

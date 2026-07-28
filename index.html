@@ -278,6 +278,20 @@
         </div>
       </div>
 
+      <div class="field">
+        <label class="recurrence-toggle">
+          <input type="checkbox" id="taskRecurring" />
+          🔁 Tarefa recorrente (repete todo mês)
+        </label>
+        <div id="recurrenceOptions" class="recurrence-options hidden">
+          <select id="taskRecurrencePeriod">
+            <option value="start">No início do mês</option>
+            <option value="end">No final do mês</option>
+          </select>
+          <p class="field-hint">Quando você concluir esta tarefa, uma nova cópia dela será criada automaticamente para o período escolhido no mês seguinte.</p>
+        </div>
+      </div>
+
       <div class="field calendar-actions">
         <label>Google Agenda</label>
         <div class="calendar-buttons">

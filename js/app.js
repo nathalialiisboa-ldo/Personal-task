@@ -236,6 +236,7 @@
       ${subtasks.length ? `<div class="progress-bar"><div class="progress-bar-fill" style="width:${Math.round((doneCount / subtasks.length) * 100)}%"></div></div>` : ""}
       <div class="task-card-meta">
         ${t.category ? `<span class="chip">${escapeHtml(t.category)}</span>` : ""}
+        ${t.recurrence?.enabled ? `<span class="chip" title="Tarefa recorrente">🔁</span>` : ""}
         ${due ? `<span class="chip ${due.cls}">📅 ${due.text}</span>` : ""}
         ${subtasks.length ? `<span>${doneCount}/${subtasks.length} ✅</span>` : ""}
         ${attCount ? `<span class="chip-att">📎 ${attCount}</span>` : ""}
@@ -288,6 +289,7 @@
       <span class="theme-row-meta">
         ${t.priority === "urgent" ? '<span class="priority-dot priority-urgent" title="Urgente"></span>' : ""}
         <span class="status-pill status-pill-${t.status}">${STATUS_LABEL[t.status]}</span>
+        ${t.recurrence?.enabled ? `<span class="chip" title="Tarefa recorrente (${t.recurrence.period === "end" ? "final" : "início"} do mês)">🔁</span>` : ""}
         ${due ? `<span class="chip ${due.cls}">📅 ${due.text}</span>` : ""}
         ${t.attachmentCount ? `<span class="chip-att">📎 ${t.attachmentCount}</span>` : ""}
       </span>
@@ -339,6 +341,7 @@
           <button type="button" class="theme-group-edit" title="Renomear tema">✏️</button>
           <span class="theme-group-count">${doneCount}/${items.length} concluídas</span>
           <span class="theme-group-progress progress-bar"><span class="progress-bar-fill" style="display:block;width:${pct}%"></span></span>
+          <button type="button" class="theme-group-add" title="Adicionar tarefa neste tema">+</button>
           ${isEmpty ? `<button type="button" class="theme-group-delete" title="Remover tema vazio">🗑️</button>` : ""}
         </summary>
         <div class="theme-rows">${items.length ? items.map(themeRowHTML).join("") : '<div class="theme-empty">Nenhuma tarefa neste tema ainda.</div>'}</div>
@@ -418,6 +421,14 @@
         renderBoard();
       });
     });
+    $$(".theme-group-add").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const theme = btn.closest(".theme-group").dataset.theme;
+        openTaskModal(null, theme === "Sem tema" ? "" : theme);
+      });
+    });
   }
 
   $("#btnNewTheme").addEventListener("click", () => {
@@ -456,7 +467,50 @@
     if (!isCompleteStatus) t.completedAt = null;
     saveTasks();
     logActivity("status_change", id, { from: prev, to: newStatus, title: t.title });
+    if (isCompleteStatus && !wasCompleteStatus && t.recurrence?.enabled) spawnRecurringTask(t);
     renderBoard();
+  }
+
+  // ---------- Recurring tasks ----------
+  function toLocalISO(d) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function computeNextPeriodDate(period, refDateStr) {
+    const ref = refDateStr ? new Date(refDateStr + "T00:00:00") : new Date();
+    const y = ref.getFullYear();
+    const m = ref.getMonth() + 1; // next month (0-based index for the month after ref's)
+    if (period === "end") return toLocalISO(new Date(y, m + 1, 0)); // last day of next month
+    return toLocalISO(new Date(y, m, 1)); // 1st day of next month
+  }
+  function spawnRecurringTask(sourceTask) {
+    const period = sourceTask.recurrence?.period === "end" ? "end" : "start";
+    const nextDue = computeNextPeriodDate(period, sourceTask.due);
+    const now = Date.now();
+    const newTask = {
+      id: uid(),
+      title: sourceTask.title,
+      space: sourceTask.space,
+      status: "todo",
+      priority: sourceTask.priority,
+      category: sourceTask.category,
+      due: nextDue,
+      dueTime: sourceTask.dueTime || null,
+      description: sourceTask.description || "",
+      subtasks: (sourceTask.subtasks || []).map((s) => ({ text: s.text, done: false })),
+      comments: [],
+      recurrence: { enabled: true, period },
+      attachmentCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+    };
+    tasks.unshift(newTask);
+    saveTasks();
+    logActivity("created", newTask.id, { title: newTask.title, recurring: true });
+    showToast(`Tarefa recorrente: nova ocorrência criada para ${formatDateShort(nextDue)} 🔁`);
   }
 
   function updateTopStats() {
@@ -489,7 +543,7 @@
   const modal = $("#taskModal");
   const form = $("#taskForm");
 
-  function openTaskModal(id) {
+  function openTaskModal(id, presetCategory) {
     currentTaskId = id || null;
     pendingAttachments = [];
     removedAttachmentIds = [];
@@ -501,6 +555,9 @@
     $("#subtaskList").innerHTML = "";
     $("#commentList").innerHTML = "";
     $("#btnDeleteTask").classList.toggle("hidden", !id);
+    $("#taskRecurring").checked = false;
+    $("#taskRecurrencePeriod").value = "start";
+    $("#recurrenceOptions").classList.add("hidden");
 
     if (id) {
       const t = tasks.find((x) => x.id === id);
@@ -515,11 +572,17 @@
       $("#taskDueTime").value = t.dueTime || "";
       $("#taskDescription").value = t.description || "";
       $("#modalMeta").textContent = `Criada em ${new Date(t.createdAt).toLocaleDateString("pt-BR")}`;
+      if (t.recurrence?.enabled) {
+        $("#taskRecurring").checked = true;
+        $("#taskRecurrencePeriod").value = t.recurrence.period || "start";
+        $("#recurrenceOptions").classList.remove("hidden");
+      }
       renderSubtasks(t.subtasks || []);
       renderComments(t.comments || []);
       loadAttachmentsForTask(t.id);
     } else {
       $("#taskId").value = "";
+      if (presetCategory) $("#taskCategory").value = presetCategory;
       $("#modalMeta").textContent = "Nova tarefa";
       renderSubtasks([]);
       renderComments([]);
@@ -527,6 +590,10 @@
     modal.classList.remove("hidden");
     setTimeout(() => $("#taskTitle").focus(), 50);
   }
+
+  $("#taskRecurring").addEventListener("change", (e) => {
+    $("#recurrenceOptions").classList.toggle("hidden", !e.target.checked);
+  });
 
   function closeTaskModal() {
     modal.classList.add("hidden");
@@ -718,6 +785,7 @@
     const now = Date.now();
 
     let existing = tasks.find((t) => t.id === id);
+    const wasCompleteStatus = existing ? existing.status === "done" : false;
     const status = $("#taskStatus").value;
 
     const task = existing || { id, createdAt: now, completedAt: null };
@@ -731,6 +799,9 @@
     task.description = $("#taskDescription").value.trim();
     task.subtasks = workingSubtasks;
     task.comments = workingComments;
+    task.recurrence = $("#taskRecurring").checked
+      ? { enabled: true, period: $("#taskRecurrencePeriod").value }
+      : null;
     task.updatedAt = now;
     const isCompleteStatus = status === "done";
     if (isCompleteStatus && !task.completedAt) task.completedAt = now;
@@ -751,6 +822,7 @@
       logActivity("updated", id, { title: task.title });
     }
     saveTasks();
+    if (isCompleteStatus && !wasCompleteStatus && task.recurrence?.enabled) spawnRecurringTask(task);
     closeTaskModal();
     renderBoard();
     showToast(isNew ? "Tarefa criada ✨" : "Tarefa atualizada ✅");

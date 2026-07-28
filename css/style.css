@@ -271,8 +271,9 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .theme-group-title { font-weight: 700; font-size: .98rem; flex: 1; background: transparent; border: none; color: var(--text); font-family: inherit; padding: 2px 4px; border-radius: 4px; }
 .theme-group-title:focus { outline: 2px solid var(--primary); background: var(--bg); cursor: text; }
 .theme-group-title[readonly] { cursor: pointer; }
-.theme-group-edit, .theme-group-delete { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: .85rem; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; }
-.theme-group-edit:hover, .theme-group-delete:hover { background: var(--primary-soft); color: var(--primary); }
+.theme-group-edit, .theme-group-delete, .theme-group-add { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: .85rem; padding: 2px 4px; border-radius: 4px; flex-shrink: 0; }
+.theme-group-edit:hover, .theme-group-delete:hover, .theme-group-add:hover { background: var(--primary-soft); color: var(--primary); }
+.theme-group-add { font-size: 1rem; font-weight: 700; line-height: 1; padding: 2px 7px; }
 .theme-group-count { color: var(--text-muted); font-size: .78rem; }
 .theme-group-progress { display: inline-block; width: 90px; }
 .theme-rows { display: flex; flex-direction: column; }
@@ -323,6 +324,12 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .calendar-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: .78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+.recurrence-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: .85rem; font-weight: 600; color: var(--text); margin-bottom: 0; }
+.recurrence-toggle input { accent-color: var(--primary); }
+.recurrence-options { margin-top: 8px; padding-left: 24px; }
+.recurrence-options.hidden { display: none; }
+.recurrence-options select { max-width: 220px; }
+.field-hint { font-size: .74rem; color: var(--text-muted); margin: 6px 0 0; line-height: 1.4; }
 .modal-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .spacer { flex: 1; }
 

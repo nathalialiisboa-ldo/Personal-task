@@ -123,6 +123,19 @@
   sortSelect.addEventListener("change", renderBoard);
   categoryFilter.addEventListener("change", renderBoard);
 
+  // ---------- Collapsible sidebar sections ----------
+  const LS_COLLAPSED_SECTIONS = "ptasks_collapsed_sections_v1";
+  const collapsedSections = new Set(loadJSON(LS_COLLAPSED_SECTIONS, []));
+  $$(".sidebar-section[data-section]").forEach((section) => {
+    section.classList.toggle("collapsed", collapsedSections.has(section.dataset.section));
+    section.querySelector(".sidebar-section-toggle").addEventListener("click", () => {
+      const key = section.dataset.section;
+      const isCollapsed = section.classList.toggle("collapsed");
+      if (isCollapsed) collapsedSections.add(key); else collapsedSections.delete(key);
+      localStorage.setItem(LS_COLLAPSED_SECTIONS, JSON.stringify([...collapsedSections]));
+    });
+  });
+
   function getActiveFilters() {
     const statusBoxes = $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"], .check-filter input[value="canceled"]');
     const priorityBoxes = $$('.check-filter input[value="urgent"], .check-filter input[value="high"], .check-filter input[value="medium"], .check-filter input[value="low"]');

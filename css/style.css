@@ -167,7 +167,15 @@ body {
 .nav-subitem { padding-left: 30px; font-size: .88rem; }
 
 .sidebar-section { border-top: 1px solid var(--border); padding-top: 14px; }
-.sidebar-section h4 { margin: 0 0 8px; font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.sidebar-section h4 { margin: 0; font-size: .75rem; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.sidebar-section-toggle {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  background: transparent; border: none; padding: 0 0 8px; cursor: pointer; font: inherit;
+}
+.sidebar-section-toggle .chevron { color: var(--text-muted); font-size: .7rem; transition: transform .15s ease; }
+.sidebar-section.collapsed .sidebar-section-toggle .chevron { transform: rotate(0deg); }
+.sidebar-section:not(.collapsed) .sidebar-section-toggle .chevron { transform: rotate(90deg); }
+.sidebar-section.collapsed .sidebar-section-body { display: none; }
 .check-filter { display: flex; align-items: center; gap: 8px; font-size: .88rem; padding: 4px 2px; cursor: pointer; color: var(--text); }
 .check-filter input { accent-color: var(--primary); }
 

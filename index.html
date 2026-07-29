@@ -47,28 +47,43 @@
       <button class="nav-item" data-view="dashboard">📊 Métricas</button>
     </nav>
 
-    <div class="sidebar-section">
-      <h4>Status</h4>
-      <label class="check-filter"><input type="checkbox" value="todo" checked> A fazer</label>
-      <label class="check-filter"><input type="checkbox" value="doing" checked> Em andamento</label>
-      <label class="check-filter"><input type="checkbox" value="done" checked> Concluída</label>
-      <label class="check-filter"><input type="checkbox" value="canceled" checked> Cancelada</label>
+    <div class="sidebar-section" data-section="status">
+      <button type="button" class="sidebar-section-toggle">
+        <h4>Status</h4>
+        <span class="chevron">▶</span>
+      </button>
+      <div class="sidebar-section-body">
+        <label class="check-filter"><input type="checkbox" value="todo" checked> A fazer</label>
+        <label class="check-filter"><input type="checkbox" value="doing" checked> Em andamento</label>
+        <label class="check-filter"><input type="checkbox" value="done" checked> Concluída</label>
+        <label class="check-filter"><input type="checkbox" value="canceled" checked> Cancelada</label>
+      </div>
     </div>
 
-    <div class="sidebar-section">
-      <h4>Prioridade</h4>
-      <label class="check-filter"><input type="checkbox" value="urgent" checked> Urgente</label>
-      <label class="check-filter"><input type="checkbox" value="high" checked> Alta</label>
-      <label class="check-filter"><input type="checkbox" value="medium" checked> Média</label>
-      <label class="check-filter"><input type="checkbox" value="low" checked> Baixa</label>
+    <div class="sidebar-section" data-section="priority">
+      <button type="button" class="sidebar-section-toggle">
+        <h4>Prioridade</h4>
+        <span class="chevron">▶</span>
+      </button>
+      <div class="sidebar-section-body">
+        <label class="check-filter"><input type="checkbox" value="urgent" checked> Urgente</label>
+        <label class="check-filter"><input type="checkbox" value="high" checked> Alta</label>
+        <label class="check-filter"><input type="checkbox" value="medium" checked> Média</label>
+        <label class="check-filter"><input type="checkbox" value="low" checked> Baixa</label>
+      </div>
     </div>
 
-    <div class="sidebar-section">
-      <h4>Categoria</h4>
-      <select id="categoryFilter">
-        <option value="">Todas</option>
-      </select>
-      <button id="btnNewTheme" class="btn btn-ghost btn-block theme-new-btn">+ Novo tema</button>
+    <div class="sidebar-section" data-section="category">
+      <button type="button" class="sidebar-section-toggle">
+        <h4>Categoria</h4>
+        <span class="chevron">▶</span>
+      </button>
+      <div class="sidebar-section-body">
+        <select id="categoryFilter">
+          <option value="">Todas</option>
+        </select>
+        <button id="btnNewTheme" class="btn btn-ghost btn-block theme-new-btn">+ Novo tema</button>
+      </div>
     </div>
 
     <div class="sidebar-footer">

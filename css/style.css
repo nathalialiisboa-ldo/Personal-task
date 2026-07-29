@@ -361,6 +361,14 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .subtask-add input { width: 100%; }
 
 /* Comments */
+.reminder-modal { max-width: 460px; }
+.reminder-list { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+.reminder-item { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; text-align: left; border: none; width: 100%; font: inherit; color: inherit; }
+.reminder-item:hover { background: var(--primary-soft); }
+.reminder-item-title { flex: 1; font-weight: 600; font-size: .9rem; }
+.reminder-item-space { font-size: .74rem; color: var(--text-muted); }
+.reminder-empty { color: var(--text-muted); font-size: .88rem; padding: 8px 2px; }
+
 .comment-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; max-height: 140px; overflow-y: auto; }
 .comment-item { background: var(--bg); border-radius: var(--radius-sm); padding: 8px 10px; font-size: .82rem; }
 .comment-item time { display: block; color: var(--text-muted); font-size: .68rem; margin-top: 2px; }

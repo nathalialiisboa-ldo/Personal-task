@@ -211,6 +211,51 @@
     return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   }
 
+  // ---------- Due-date reminders ----------
+  const LS_REMINDER_SHOWN = "ptasks_reminder_shown_date_v1";
+  function checkDueReminders() {
+    const today = todayISO();
+    const open = tasks.filter((t) => t.due && t.status !== "done" && t.status !== "canceled");
+    const overdue = open.filter((t) => t.due < today).sort((a, b) => a.due < b.due ? -1 : 1);
+    const dueToday = open.filter((t) => t.due === today);
+    if (!overdue.length && !dueToday.length) return;
+    if (localStorage.getItem(LS_REMINDER_SHOWN) === today) return;
+    localStorage.setItem(LS_REMINDER_SHOWN, today);
+    renderReminderList(overdue, dueToday);
+    $("#reminderModal").classList.remove("hidden");
+  }
+  function reminderRowHTML(t, isOverdue) {
+    return `
+    <button type="button" class="reminder-item" data-id="${t.id}" data-space="${t.space || "todos"}">
+      <span class="reminder-item-title">${escapeHtml(t.title)}</span>
+      <span class="reminder-item-space">${escapeHtml(SPACE_LABEL[t.space || "todos"] || "")}</span>
+      <span class="chip ${isOverdue ? "due-overdue" : "due-soon"}">${isOverdue ? "Atrasada · " : ""}${formatDateShort(t.due)}</span>
+    </button>`;
+  }
+  function renderReminderList(overdue, dueToday) {
+    const parts = [];
+    if (overdue.length) parts.push(overdue.map((t) => reminderRowHTML(t, true)).join(""));
+    if (dueToday.length) parts.push(dueToday.map((t) => reminderRowHTML(t, false)).join(""));
+    $("#reminderList").innerHTML = parts.join("") || `<div class="reminder-empty">Nada pendente por hoje 🎉</div>`;
+    $$("#reminderList .reminder-item").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        $("#reminderModal").classList.add("hidden");
+        currentSpace = btn.dataset.space;
+        $$(".nav-item").forEach((b) => b.classList.remove("active"));
+        const navBtn = $(`.nav-item[data-space="${currentSpace}"]`);
+        if (navBtn) navBtn.classList.add("active");
+        $$(".view").forEach((v) => v.classList.remove("active"));
+        $("#view-board").classList.add("active");
+        $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
+        renderBoard();
+        openTaskModal(btn.dataset.id);
+      });
+    });
+  }
+  $("#btnCloseReminder").addEventListener("click", () => $("#reminderModal").classList.add("hidden"));
+  $("#btnCloseReminderFooter").addEventListener("click", () => $("#reminderModal").classList.add("hidden"));
+  $("#reminderModal").addEventListener("click", (e) => { if (e.target.id === "reminderModal") $("#reminderModal").classList.add("hidden"); });
+
   function filteredSortedTasks() {
     const f = getActiveFilters();
     let list = tasks.filter((t) => {
@@ -1082,4 +1127,5 @@
   }
   $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
   setBoardMode(boardMode);
+  checkDueReminders();
 })();

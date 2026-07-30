@@ -94,6 +94,21 @@
     renderDashboard(true);
   });
 
+  // ---------- Data dropdown (Exportar / Importar) ----------
+  const dataDropdownMenu = $("#dataDropdownMenu");
+  $("#btnDataMenu").addEventListener("click", (e) => {
+    e.stopPropagation();
+    dataDropdownMenu.classList.toggle("hidden");
+  });
+  document.addEventListener("click", (e) => {
+    if (!dataDropdownMenu.classList.contains("hidden") && !e.target.closest(".sidebar-dropdown")) {
+      dataDropdownMenu.classList.add("hidden");
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") dataDropdownMenu.classList.add("hidden");
+  });
+
   // ---------- Toast ----------
   let toastTimer = null;
   function showToast(msg) {
@@ -910,6 +925,7 @@
     a.download = `minhas-tarefas-${todayISO()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    dataDropdownMenu.classList.add("hidden");
     showToast("Dados exportados ⬇️");
   });
 
@@ -933,6 +949,7 @@
       showToast("Falha ao importar: arquivo inválido");
     } finally {
       e.target.value = "";
+      dataDropdownMenu.classList.add("hidden");
     }
   });
 

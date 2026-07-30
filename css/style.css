@@ -181,6 +181,20 @@ body {
 
 .sidebar-footer { margin-top: auto; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border); padding-top: 14px; }
 
+.sidebar-dropdown { position: relative; }
+.sidebar-dropdown-menu {
+  position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; z-index: 20;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.sidebar-dropdown-menu.hidden { display: none; }
+.sidebar-dropdown-item {
+  display: block; width: 100%; text-align: left; padding: 10px 14px; background: transparent;
+  border: none; cursor: pointer; font-size: .88rem; color: var(--text); font: inherit;
+}
+.sidebar-dropdown-item:hover { background: var(--primary-soft); color: var(--primary); }
+.sidebar-dropdown-item + .sidebar-dropdown-item { border-top: 1px solid var(--border); }
+
 select, input[type="text"], input[type="date"], input[type="search"], textarea {
   background: var(--bg);
   border: 1px solid var(--border);

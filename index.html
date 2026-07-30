@@ -89,9 +89,14 @@
 
     <div class="sidebar-footer">
       <button id="btnTheme" class="btn btn-ghost btn-block">🌓 Tema</button>
-      <button id="btnExport" class="btn btn-ghost btn-block">⬇️ Exportar dados</button>
-      <label class="btn btn-ghost btn-block" for="importFile">⬆️ Importar dados</label>
-      <input type="file" id="importFile" accept="application/json" hidden />
+      <div class="sidebar-dropdown">
+        <button type="button" id="btnDataMenu" class="btn btn-ghost btn-block">📁 Dados ▾</button>
+        <div id="dataDropdownMenu" class="sidebar-dropdown-menu hidden">
+          <button type="button" id="btnExport" class="sidebar-dropdown-item">⬇️ Exportar dados</button>
+          <label class="sidebar-dropdown-item" for="importFile">⬆️ Importar dados</label>
+          <input type="file" id="importFile" accept="application/json" hidden />
+        </div>
+      </div>
       <button id="btnSeed" class="btn btn-ghost btn-block">✨ Dados de exemplo</button>
       <button id="btnClearAll" class="btn btn-danger-ghost btn-block">🗑️ Limpar tudo</button>
     </div>

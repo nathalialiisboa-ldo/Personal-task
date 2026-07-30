@@ -44,6 +44,7 @@
       </div>
       <button class="nav-item" data-view="board" data-space="extra">➕ Atividades Extra</button>
       <button class="nav-item" data-view="anotacoes">📝 Anotações</button>
+      <button class="nav-item" data-view="oneonones">🤝 1:1s</button>
       <button class="nav-item" data-view="dashboard">📊 Métricas</button>
     </nav>
 
@@ -234,6 +235,40 @@
         <button id="btnNewNote" class="btn btn-primary">+ Nova anotação</button>
       </header>
       <div id="notesGrid" class="notes-list"></div>
+    </section>
+
+    <!-- 1:1s VIEW -->
+    <section id="view-oneonones" class="view">
+      <div id="oneononesListPane">
+        <header class="topbar">
+          <h2>🤝 1:1s</h2>
+          <div class="search-wrap">
+            <input type="search" id="oneononesSearchInput" placeholder="Buscar pessoa..." />
+          </div>
+          <div class="spacer"></div>
+          <label for="oneononeImportFile" class="btn btn-ghost">📥 Importar 1:1s</label>
+          <input type="file" id="oneononeImportFile" accept="application/json" hidden />
+          <button id="btnNewOneOnOne" class="btn btn-primary">+ Nova pessoa</button>
+        </header>
+        <p class="notas-intro">
+          Cada pessoa guarda o histórico de 1:1s organizado por data, com o mesmo editor de texto das
+          Anotações. Já tem 1:1s registrados em algum Doc? Copie o conteúdo, peça pro Claude te devolver
+          um arquivo <code>.json</code> no formato que este botão de importar entende, e importe aqui.
+        </p>
+        <div id="oneononesGrid" class="notes-list"></div>
+      </div>
+
+      <div id="oneononeDetailPane" class="oneonone-detail hidden">
+        <header class="topbar">
+          <button type="button" id="btnBackOneOnOnes" class="btn btn-ghost">← Voltar</button>
+          <h2 id="oneononeDetailName">—</h2>
+          <div class="spacer"></div>
+          <button type="button" id="btnRenameOneOnOne" class="btn btn-ghost" title="Renomear pessoa">✏️ Renomear</button>
+          <button type="button" id="btnDeleteOneOnOne" class="btn btn-danger-ghost" title="Excluir pessoa">🗑️ Excluir</button>
+          <button type="button" id="btnNewOneOnOneEntry" class="btn btn-primary">+ Nova anotação</button>
+        </header>
+        <div id="oneononeEntries" class="oneonone-entries"></div>
+      </div>
     </section>
 
   </main>
@@ -456,6 +491,63 @@
   </div>
 </div>
 
+<!-- 1:1 person modal -->
+<div id="oneononePersonModal" class="modal-overlay hidden">
+  <div class="modal oneonone-person-modal">
+    <button class="modal-close" id="btnCloseOneOnOnePerson">✕</button>
+    <div class="modal-header">
+      <h3 id="oneononePersonModalTitle">Nova pessoa</h3>
+    </div>
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="oneononePersonName" placeholder="Nome da pessoa" maxlength="80" />
+    </div>
+    <div class="modal-footer">
+      <div class="spacer"></div>
+      <button type="button" id="btnCancelOneOnOnePerson" class="btn btn-ghost">Cancelar</button>
+      <button type="button" id="btnSaveOneOnOnePerson" class="btn btn-primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- 1:1 entry modal -->
+<div id="oneononeEntryModal" class="modal-overlay hidden">
+  <div class="modal">
+    <button class="modal-close" id="btnCloseOneOnOneEntry">✕</button>
+    <div class="modal-header">
+      <input type="text" id="oneononeEntryTitle" placeholder="Título/cabeçalho (opcional, ex: Pauta, Feedback...)" maxlength="140" />
+      <span class="badge" id="oneononeEntryMeta"></span>
+    </div>
+    <div class="field oneonone-entry-date-field">
+      <label>Data</label>
+      <input type="date" id="oneononeEntryDate" />
+    </div>
+    <div class="note-toolbar">
+      <button type="button" class="note-tb-btn" data-cmd="bold" title="Negrito"><b>N</b></button>
+      <button type="button" class="note-tb-btn" data-cmd="italic" title="Itálico"><i>I</i></button>
+      <button type="button" class="note-tb-btn" data-cmd="underline" title="Sublinhado"><u>S</u></button>
+      <button type="button" class="note-tb-btn" data-cmd="strikeThrough" title="Riscado"><s>R</s></button>
+      <span class="note-tb-sep"></span>
+      <button type="button" class="note-tb-btn" data-cmd="insertUnorderedList" title="Lista com marcadores">• Lista</button>
+      <button type="button" class="note-tb-btn" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+      <span class="note-tb-sep"></span>
+      <button type="button" class="note-tb-btn" data-cmd="formatBlock" data-value="H3" title="Título">Título</button>
+      <button type="button" class="note-tb-btn" data-cmd="formatBlock" data-value="P" title="Texto normal">Texto</button>
+      <span class="note-tb-sep"></span>
+      <span class="note-tb-colors" id="oneononeColorSwatches"></span>
+      <span class="note-tb-sep"></span>
+      <button type="button" class="note-tb-btn" data-cmd="removeFormat" title="Limpar formatação">Limpar</button>
+    </div>
+    <div id="oneononeEntryEditor" class="note-editor" contenteditable="true" data-placeholder="Escreva as anotações desse 1:1 aqui..."></div>
+    <div class="modal-footer">
+      <button type="button" id="btnDeleteOneOnOneEntry" class="btn btn-danger-ghost hidden">Excluir</button>
+      <div class="spacer"></div>
+      <button type="button" id="btnCancelOneOnOneEntry" class="btn btn-ghost">Cancelar</button>
+      <button type="button" id="btnSaveOneOnOneEntry" class="btn btn-primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Reminders popup -->
 <div id="reminderModal" class="modal-overlay hidden">
   <div class="modal reminder-modal">
@@ -485,6 +577,7 @@
 <script src="js/db.js"></script>
 <script src="js/entregaveis.js"></script>
 <script src="js/anotacoes.js"></script>
+<script src="js/oneonones.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

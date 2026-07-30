@@ -326,6 +326,7 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .modal-header input[type=text] { font-size: 1.2rem; font-weight: 700; border: none; background: transparent; padding: 6px 0; }
 .modal-header input[type=text]:focus { outline: none; border-bottom: 2px solid var(--primary); }
+.modal-header h3 { margin: 0; font-size: 1.2rem; }
 .badge { font-size: .7rem; color: var(--text-muted); white-space: nowrap; }
 .modal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
 .calendar-actions { margin-top: -6px; }
@@ -465,6 +466,30 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .note-card-color-field { margin-top: 14px; }
 .note-card-colors { display: flex; align-items: center; gap: 8px; }
 .note-cardcolor-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; padding: 0; }
+
+/* 1:1s */
+.oneonone-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; border-top: 1px solid var(--border); transition: background .12s ease; }
+.oneonone-row:first-child { border-top: none; }
+.oneonone-row:hover { background: var(--primary-soft); }
+.oneonone-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .82rem; flex-shrink: 0; }
+.oneonone-row-name { flex-shrink: 0; width: 200px; max-width: 32%; font-weight: 700; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.oneonone-row-preview { flex: 1; min-width: 0; font-size: .82rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.oneonone-row-meta { flex-shrink: 0; font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
+
+.oneonone-detail.hidden { display: none; }
+.oneonone-entries { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
+.oneonone-entry { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+.oneonone-entry-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 2px solid var(--primary-soft); flex-wrap: wrap; }
+.oneonone-entry-date { font-weight: 700; color: var(--primary); font-size: .9rem; white-space: nowrap; }
+.oneonone-entry-title { font-weight: 700; font-size: .95rem; }
+.oneonone-entry-actions { margin-left: auto; display: flex; gap: 4px; }
+.oneonone-entry-edit, .oneonone-entry-delete { background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-size: .85rem; padding: 3px 6px; border-radius: 6px; }
+.oneonone-entry-edit:hover, .oneonone-entry-delete:hover { background: var(--primary-soft); color: var(--primary); }
+.oneonone-entry-body { font-size: .9rem; line-height: 1.55; }
+.oneonone-entry-body ul, .oneonone-entry-body ol { padding-left: 22px; margin: 8px 0; }
+.oneonone-entry-body h3 { margin: 10px 0 6px; font-size: 1.02rem; }
+.oneonone-person-modal { max-width: 380px; }
+.oneonone-entry-date-field { max-width: 200px; }
 .note-cardcolor-dot.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
 
 /* Toast */

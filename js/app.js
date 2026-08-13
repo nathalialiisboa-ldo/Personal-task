@@ -803,7 +803,8 @@
   $("#btnCloseLightbox").addEventListener("click", () => $("#lightbox").classList.add("hidden"));
   $("#lightbox").addEventListener("click", (e) => { if (e.target.id === "lightbox") $("#lightbox").classList.add("hidden"); });
 
-  // ---------- Google Calendar integration ----------
+  // ---------- Google Tarefas integration ----------
+  const LS_GOOGLE_CLIENT_ID = "ptasks_google_client_id_v1";
   function getEventWindow() {
     const dateVal = $("#taskDue").value;
     if (!dateVal) { showToast("Defina uma data para usar a agenda."); return null; }
@@ -812,20 +813,73 @@
     const end = new Date(start.getTime() + 60 * 60000);
     return { start, end };
   }
-  function toGCalStamp(d) { return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z"; }
   function toIcsStamp(d) { return d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z"; }
 
-  $("#btnGCal").addEventListener("click", () => {
-    const win = getEventWindow();
-    if (!win) return;
+  function openGTasksConfigModal() {
+    $("#gtasksClientId").value = localStorage.getItem(LS_GOOGLE_CLIENT_ID) || "";
+    $("#gtasksConfigModal").classList.remove("hidden");
+  }
+  function closeGTasksConfigModal() { $("#gtasksConfigModal").classList.add("hidden"); }
+  $("#btnGTasksConfig").addEventListener("click", openGTasksConfigModal);
+  $("#btnCloseGTasksConfig").addEventListener("click", closeGTasksConfigModal);
+  $("#btnCancelGTasksConfig").addEventListener("click", closeGTasksConfigModal);
+  $("#gtasksConfigModal").addEventListener("click", (e) => { if (e.target.id === "gtasksConfigModal") closeGTasksConfigModal(); });
+  $("#btnSaveGTasksConfig").addEventListener("click", () => {
+    const val = $("#gtasksClientId").value.trim();
+    if (val) localStorage.setItem(LS_GOOGLE_CLIENT_ID, val); else localStorage.removeItem(LS_GOOGLE_CLIENT_ID);
+    gTasksTokenClient = null;
+    closeGTasksConfigModal();
+    showToast("Configuração salva ✅");
+  });
+
+  let gTasksTokenClient = null;
+  function getGTasksTokenClient(clientId) {
+    if (!gTasksTokenClient || gTasksTokenClient.__clientId !== clientId) {
+      gTasksTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: "https://www.googleapis.com/auth/tasks",
+        callback: () => {},
+      });
+      gTasksTokenClient.__clientId = clientId;
+    }
+    return gTasksTokenClient;
+  }
+
+  $("#btnGTasks").addEventListener("click", () => {
+    const clientId = localStorage.getItem(LS_GOOGLE_CLIENT_ID);
+    if (!clientId) {
+      showToast("Configure a conexão com o Google Tarefas primeiro (⚙️).");
+      openGTasksConfigModal();
+      return;
+    }
+    if (typeof google === "undefined" || !google.accounts) {
+      showToast("Não foi possível carregar o login do Google. Verifique sua internet e tente de novo.");
+      return;
+    }
     const title = $("#taskTitle").value.trim() || "Tarefa";
-    const details = $("#taskDescription").value.trim();
-    const url = new URL("https://calendar.google.com/calendar/render");
-    url.searchParams.set("action", "TEMPLATE");
-    url.searchParams.set("text", title);
-    url.searchParams.set("dates", `${toGCalStamp(win.start)}/${toGCalStamp(win.end)}`);
-    if (details) url.searchParams.set("details", details);
-    window.open(url.toString(), "_blank", "noopener");
+    const notes = $("#taskDescription").value.trim();
+    const dueVal = $("#taskDue").value;
+    const due = dueVal ? `${dueVal}T00:00:00.000Z` : undefined;
+
+    const client = getGTasksTokenClient(clientId);
+    client.callback = async (resp) => {
+      if (resp.error) {
+        showToast("Não foi possível autorizar o acesso ao Google.");
+        return;
+      }
+      try {
+        const res = await fetch("https://tasks.googleapis.com/tasks/v1/lists/@default/tasks", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${resp.access_token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ title, notes: notes || undefined, due }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        showToast("Tarefa adicionada ao Google Tarefas ✅");
+      } catch {
+        showToast("Falha ao criar a tarefa no Google Tarefas.");
+      }
+    };
+    client.requestAccessToken({ prompt: "" });
   });
 
   $("#btnIcs").addEventListener("click", () => {

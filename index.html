@@ -348,9 +348,10 @@
       </div>
 
       <div class="field calendar-actions">
-        <label>Google Agenda</label>
+        <label>Google Tarefas</label>
         <div class="calendar-buttons">
-          <button type="button" id="btnGCal" class="btn btn-ghost">📅 Adicionar ao Google Agenda</button>
+          <button type="button" id="btnGTasks" class="btn btn-ghost">✅ Adicionar ao Google Tarefas</button>
+          <button type="button" id="btnGTasksConfig" class="btn btn-ghost" title="Configurar conexão com o Google">⚙️</button>
           <button type="button" id="btnIcs" class="btn btn-ghost">⬇️ Baixar .ics</button>
         </div>
       </div>
@@ -496,6 +497,29 @@
   </div>
 </div>
 
+<!-- Google Tarefas config modal -->
+<div id="gtasksConfigModal" class="modal-overlay hidden">
+  <div class="modal oneonone-person-modal">
+    <button class="modal-close" id="btnCloseGTasksConfig">✕</button>
+    <div class="modal-header">
+      <h3>⚙️ Conectar Google Tarefas</h3>
+    </div>
+    <p class="field-hint">
+      Cole aqui o "Client ID" do Google Cloud que você criou seguindo o passo a passo que o Claude te
+      mandou. Ele fica salvo só neste navegador — nunca é enviado a nenhum servidor.
+    </p>
+    <div class="field">
+      <label>Client ID do Google</label>
+      <input type="text" id="gtasksClientId" placeholder="algo como 123456789-abc.apps.googleusercontent.com" />
+    </div>
+    <div class="modal-footer">
+      <div class="spacer"></div>
+      <button type="button" id="btnCancelGTasksConfig" class="btn btn-ghost">Cancelar</button>
+      <button type="button" id="btnSaveGTasksConfig" class="btn btn-primary">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- 1:1 person modal -->
 <div id="oneononePersonModal" class="modal-overlay hidden">
   <div class="modal oneonone-person-modal">
@@ -579,6 +603,7 @@
 <div id="toast" class="toast hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="js/db.js"></script>
 <script src="js/entregaveis.js"></script>
 <script src="js/anotacoes.js"></script>

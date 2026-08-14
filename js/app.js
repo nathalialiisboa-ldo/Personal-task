@@ -75,7 +75,7 @@
       if (view === "dashboard") renderDashboard();
       if (view === "notas" && typeof renderNotasView === "function") renderNotasView();
       if (view === "anotacoes" && typeof renderAnotacoesView === "function") renderAnotacoesView();
-      if (view === "oneonones" && typeof renderOneOnOnesView === "function") renderOneOnOnesView();
+      if (view === "oneonones" && typeof mountOneOnOnes === "function") mountOneOnOnes(document.getElementById("view-oneonones"), null);
     });
   });
 

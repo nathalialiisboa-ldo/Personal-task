@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("notesSearchInput").addEventListener("input", renderAnotacoesView);
 
   // Formatting toolbar
-  document.querySelectorAll(".note-tb-btn").forEach((btn) => {
+  document.querySelectorAll("#noteModal .note-tb-btn").forEach((btn) => {
     btn.addEventListener("mousedown", (e) => e.preventDefault()); // keep selection alive
     btn.addEventListener("click", () => {
       const cmd = btn.dataset.cmd;

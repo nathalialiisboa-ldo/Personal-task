@@ -51,6 +51,16 @@ function formatDateLongOO(iso) {
 
 // ---------- List view ----------
 let currentPersonId = null;
+let activeOOAreaId = null; // null = personal 1:1s tab; otherwise scoped to an área de atendimento
+
+function mountOneOnOnes(targetEl, areaId) {
+  const root = document.getElementById("oneononesRoot");
+  if (root && targetEl && root.parentElement !== targetEl) targetEl.appendChild(root);
+  activeOOAreaId = areaId || null;
+  const heading = document.getElementById("oneononesHeading");
+  if (heading) heading.textContent = activeOOAreaId ? "🤝 1:1s da área" : "🤝 1:1s";
+  renderOneOnOnesView();
+}
 
 function personRowHTML(person, entries) {
   const personEntries = entries.filter((e) => e.personId === person.id).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
@@ -75,7 +85,9 @@ function renderOneOnOnesView() {
 
   const search = (document.getElementById("oneononesSearchInput")?.value || "").trim().toLowerCase();
   const entries = loadOOEntries();
-  let people = loadPeople().sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  let people = loadPeople()
+    .filter((p) => (p.areaId || null) === activeOOAreaId)
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   if (search) people = people.filter((p) => p.name.toLowerCase().includes(search));
 
   grid.innerHTML = people.map((p) => personRowHTML(p, entries)).join("") ||
@@ -163,7 +175,7 @@ function savePersonFromModal() {
       document.getElementById("oneononeDetailName").textContent = name;
     }
   } else {
-    list.push({ id: uidOO(), name, createdAt: now, updatedAt: now });
+    list.push({ id: uidOO(), name, areaId: activeOOAreaId || null, createdAt: now, updatedAt: now });
   }
   savePeople(list);
   closePersonModal();
@@ -247,9 +259,9 @@ function importOneOnOnesFile(file) {
       peopleIn.forEach((pIn) => {
         const name = (pIn.name || "").trim();
         if (!name) return;
-        let person = people.find((p) => p.name.toLowerCase() === name.toLowerCase());
+        let person = people.find((p) => p.name.toLowerCase() === name.toLowerCase() && (p.areaId || null) === activeOOAreaId);
         if (!person) {
-          person = { id: uidOO(), name, createdAt: now, updatedAt: now };
+          person = { id: uidOO(), name, areaId: activeOOAreaId || null, createdAt: now, updatedAt: now };
           people.push(person);
           peopleAdded++;
         }

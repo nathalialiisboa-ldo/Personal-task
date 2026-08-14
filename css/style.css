@@ -113,6 +113,13 @@ body {
 .topnav-brand-text { display: flex; flex-direction: column; line-height: 1.2; }
 .topnav-brand-text strong { font-size: .92rem; }
 .topnav-brand-text small { font-size: .68rem; opacity: .85; }
+.module-switch { display: flex; gap: 4px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 3px; }
+.module-switch-btn {
+  background: transparent; border: none; border-radius: 999px; padding: 6px 14px; font-size: .78rem;
+  font-weight: 600; color: rgba(255,255,255,.85); cursor: pointer; white-space: nowrap;
+}
+.module-switch-btn.active { background: #fff; color: var(--primary); }
+@media (max-width: 900px) { .module-switch { display: none; } }
 .topnav-right { display: flex; align-items: center; gap: 12px; }
 .topnav-date-pill {
   background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
@@ -504,6 +511,17 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .oneonone-entry-body h3 { margin: 10px 0 6px; font-size: 1.02rem; }
 .oneonone-person-modal { max-width: 380px; }
 .oneonone-entry-date-field { max-width: 200px; }
+
+/* Áreas de Atendimento */
+.area-subtabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.area-subtab {
+  background: transparent; border: none; padding: 10px 16px; font-size: .88rem; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.area-subtab:hover { color: var(--text); }
+.area-subtab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.area-subview { display: none; }
+.area-subview.active { display: block; }
 .note-cardcolor-dot.active { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
 
 /* Toast */

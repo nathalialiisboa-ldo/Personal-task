@@ -141,56 +141,121 @@ function findColumnIndex(headers, patterns, fallbackIndex) {
   return fallbackIndex;
 }
 
+// Correspondência fixa entre o nome da área no app e o valor usado na coluna de área da
+// planilha de ativos — evita ter que confirmar manualmente toda vez para essas áreas conhecidas.
+const AREA_ORG_LABEL_MAP = {
+  "gente & gestão": "Gente e Gestão",
+  "financeiro": "Financeiro",
+  "estratégia": "Estratégia",
+  "mkt & growth": "BCM e Growth",
+  "comercial": "Comercial",
+  "costumer experience": "Experiência do Cliente",
+};
+const AREA_ORG_LABEL_MAP_NORM = Object.fromEntries(
+  Object.entries(AREA_ORG_LABEL_MAP).map(([k, v]) => [normalizeLabel(k), v])
+);
+
+function parseCSVFile(text) {
+  const rows = parseCSVArea(text);
+  if (rows.length < 2) return null;
+  const headers = rows[0];
+  const dataRows = rows.slice(1);
+
+  const areaColIdx = findColumnIndex(headers, [/centro de resultado/i, /^área$/i, /^area$/i], 6);
+  const leadColIdx = findColumnIndex(headers, [/chefia imediata/i, /lideran[çc]a direta/i], 10);
+  const nomeColIdx = findColumnIndex(headers, [/^nome$/i], 1);
+  const cargoColIdx = findColumnIndex(headers, [/^fun[çc][ãa]o$/i, /^cargo$/i], -1);
+  const matriculaColIdx = findColumnIndex(headers, [/^matr[íi]cula$/i], 0);
+
+  const records = dataRows
+    .filter((r) => r.some((cell) => cell.trim() !== ""))
+    .map((r) => ({
+      matricula: (r[matriculaColIdx] || "").trim(),
+      nome: (r[nomeColIdx] || "").trim(),
+      cargo: cargoColIdx >= 0 ? (r[cargoColIdx] || "").trim() : "",
+      area: (r[areaColIdx] || "").trim(),
+      chefia: (r[leadColIdx] || "").trim(),
+    }))
+    .filter((r) => r.nome);
+
+  const distinctLabels = Array.from(new Set(records.map((r) => r.area).filter(Boolean)));
+  return { records, distinctLabels };
+}
+
+// Resolve qual valor bruto da coluna de área corresponde a uma área do app, nesta ordem:
+// de-para fixo -> escolha lembrada de uma importação anterior -> correspondência única por nome.
+function resolveLabelForArea(area, distinctLabels) {
+  const fixed = AREA_ORG_LABEL_MAP_NORM[normalizeLabel(area.name)];
+  if (fixed && distinctLabels.includes(fixed)) return fixed;
+
+  const remembered = loadAreaOrgLabelStore()[area.id];
+  if (remembered && distinctLabels.includes(remembered)) return remembered;
+
+  const normalizedAreaName = normalizeLabel(area.name);
+  const matches = distinctLabels.filter((l) => {
+    const nl = normalizeLabel(l);
+    return nl === normalizedAreaName || nl.includes(normalizedAreaName) || normalizedAreaName.includes(nl);
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function applyPeopleForArea(areaId, records, label) {
+  const people = records
+    .filter((r) => r.area === label)
+    .map((r) => ({ id: r.matricula || uidArea(), nome: r.nome, cargo: r.cargo, chefia: r.chefia }));
+  const store = loadAreaOrgStore();
+  store[areaId] = people;
+  saveAreaOrgStore(store);
+  const labelStore = loadAreaOrgLabelStore();
+  labelStore[areaId] = label;
+  saveAreaOrgLabelStore(labelStore);
+  return people.length;
+}
+
 let pendingOrgImport = null; // { records, distinctLabels }
 
 function handleOrgImportFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
-    const rows = parseCSVArea(String(reader.result));
-    if (rows.length < 2) { if (window.showToast) window.showToast("Arquivo vazio ou inválido."); return; }
-    const headers = rows[0];
-    const dataRows = rows.slice(1);
-
-    const areaColIdx = findColumnIndex(headers, [/centro de resultado/i, /^área$/i, /^area$/i], 6);
-    const leadColIdx = findColumnIndex(headers, [/chefia imediata/i, /lideran[çc]a direta/i], 10);
-    const nomeColIdx = findColumnIndex(headers, [/^nome$/i], 1);
-    const cargoColIdx = findColumnIndex(headers, [/^fun[çc][ãa]o$/i, /^cargo$/i], -1);
-    const matriculaColIdx = findColumnIndex(headers, [/^matr[íi]cula$/i], 0);
-
-    const records = dataRows
-      .filter((r) => r.some((cell) => cell.trim() !== ""))
-      .map((r) => ({
-        matricula: (r[matriculaColIdx] || "").trim(),
-        nome: (r[nomeColIdx] || "").trim(),
-        cargo: cargoColIdx >= 0 ? (r[cargoColIdx] || "").trim() : "",
-        area: (r[areaColIdx] || "").trim(),
-        chefia: (r[leadColIdx] || "").trim(),
-      }))
-      .filter((r) => r.nome);
-
-    const distinctLabels = Array.from(new Set(records.map((r) => r.area).filter(Boolean)));
-    pendingOrgImport = { records, distinctLabels };
+    const parsed = parseCSVFile(String(reader.result));
+    if (!parsed) { if (window.showToast) window.showToast("Arquivo vazio ou inválido."); return; }
+    pendingOrgImport = parsed;
 
     if (!currentAreaId) return;
     const area = loadAreas().find((a) => a.id === currentAreaId);
     if (!area) return;
 
-    const rememberedLabel = loadAreaOrgLabelStore()[currentAreaId];
-    if (rememberedLabel && distinctLabels.includes(rememberedLabel)) {
-      applyOrgImportForLabel(rememberedLabel);
-      return;
-    }
-
-    const normalizedAreaName = normalizeLabel(area.name);
-    const matches = distinctLabels.filter((l) => {
-      const nl = normalizeLabel(l);
-      return nl === normalizedAreaName || nl.includes(normalizedAreaName) || normalizedAreaName.includes(nl);
-    });
-    if (matches.length === 1) {
-      applyOrgImportForLabel(matches[0]);
+    const label = resolveLabelForArea(area, parsed.distinctLabels);
+    if (label) {
+      applyOrgImportForLabel(label);
     } else {
-      showOrgMapPicker(area.name, distinctLabels);
+      showOrgMapPicker(area.name, parsed.distinctLabels);
     }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+function handleGlobalOrgImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const parsed = parseCSVFile(String(reader.result));
+    if (!parsed) { if (window.showToast) window.showToast("Arquivo vazio ou inválido."); return; }
+
+    const areas = loadAreas();
+    let updatedAreas = 0, totalPeople = 0;
+    const notFound = [];
+    areas.forEach((area) => {
+      const label = resolveLabelForArea(area, parsed.distinctLabels);
+      if (!label) { notFound.push(area.name); return; }
+      totalPeople += applyPeopleForArea(area.id, parsed.records, label);
+      updatedAreas++;
+    });
+
+    if (currentAreaId && currentAreaSubtab === "estrutura") renderOrgChart(currentAreaId);
+
+    const summary = `Organogramas atualizados: ${updatedAreas} área(s), ${totalPeople} pessoa(s) 🗂️` +
+      (notFound.length ? ` — não encontrei: ${notFound.join(", ")}` : "");
+    if (window.showToast) window.showToast(summary);
   };
   reader.readAsText(file, "UTF-8");
 }
@@ -204,29 +269,22 @@ function showOrgMapPicker(areaName, distinctLabels) {
 
 function applyOrgImportForLabel(label) {
   if (!pendingOrgImport || !currentAreaId) return;
-  const people = pendingOrgImport.records
-    .filter((r) => r.area === label)
-    .map((r) => ({ id: r.matricula || uidArea(), nome: r.nome, cargo: r.cargo, chefia: r.chefia }));
-
-  const store = loadAreaOrgStore();
-  store[currentAreaId] = people;
-  saveAreaOrgStore(store);
-
-  const labelStore = loadAreaOrgLabelStore();
-  labelStore[currentAreaId] = label;
-  saveAreaOrgLabelStore(labelStore);
-
+  const count = applyPeopleForArea(currentAreaId, pendingOrgImport.records, label);
   document.getElementById("areaOrgMapPicker").classList.add("hidden");
   pendingOrgImport = null;
   renderOrgChart(currentAreaId);
-  if (window.showToast) window.showToast(`${people.length} pessoa(s) importada(s) para o organograma 🗂️`);
+  if (window.showToast) window.showToast(`${count} pessoa(s) importada(s) para o organograma 🗂️`);
 }
 
 function orgNodeHTML(person) {
+  const initial = (person.nome || "?").trim().charAt(0).toUpperCase();
   return `
   <div class="org-node">
-    <span class="org-node-name">${escapeHtmlArea(person.nome)}</span>
-    ${person.cargo ? `<span class="org-node-role">${escapeHtmlArea(person.cargo)}</span>` : ""}
+    <span class="org-node-avatar">${escapeHtmlArea(initial)}</span>
+    <span class="org-node-text">
+      <span class="org-node-name">${escapeHtmlArea(person.nome)}</span>
+      ${person.cargo ? `<span class="org-node-role">${escapeHtmlArea(person.cargo)}</span>` : ""}
+    </span>
   </div>`;
 }
 
@@ -360,6 +418,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnOrgMapConfirm").addEventListener("click", () => {
     const label = document.getElementById("orgMapSelect").value;
     if (label) applyOrgImportForLabel(label);
+  });
+  document.getElementById("areaOrgGlobalImportFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleGlobalOrgImportFile(file);
+    e.target.value = "";
   });
 
   // Estrutura / Orçamento: formatting toolbars + autosave on blur

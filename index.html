@@ -332,6 +332,13 @@
             <label>Selecione quais valores da coluna de área da planilha pertencem a "<strong id="orgMapAreaName"></strong>"
               (pode marcar mais de um):</label>
             <div id="orgMapCheckboxes" class="org-chart-map-checkboxes"></div>
+
+            <label>Pessoas específicas de outra área/departamento (ex: C-levels que ficam num centro de
+              resultado corporativo à parte) que devem aparecer neste organograma:</label>
+            <input type="text" id="orgMapPersonSearch" placeholder="Buscar pessoa pelo nome..." />
+            <div id="orgMapPersonResults" class="org-map-person-results"></div>
+            <div id="orgMapPersonSelected" class="org-map-person-selected"></div>
+
             <button type="button" id="btnOrgMapConfirm" class="btn btn-primary btn-sm">Usar esta seleção</button>
           </div>
           <div id="areaOrgChart" class="org-chart"></div>

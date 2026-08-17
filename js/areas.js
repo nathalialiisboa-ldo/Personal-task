@@ -4,7 +4,8 @@
 const LS_AREAS = "ptasks_areas_v1";
 const LS_AREA_DOCS = "ptasks_area_docs_v1"; // [{id, areaId, type: "estrutura"|"orcamento", html, updatedAt}]
 const LS_AREA_ORG = "ptasks_area_org_v1"; // { [areaId]: [{id, nome, cargo, chefia}] } — só o essencial, nada de dados sensíveis
-const LS_AREA_ORG_LABEL = "ptasks_area_org_label_v1"; // { [areaId]: "valor bruto da coluna de área escolhido da última vez" }
+const LS_AREA_ORG_LABEL = "ptasks_area_org_label_v1"; // { [areaId]: ["valores brutos da coluna de área" escolhidos da última vez] }
+const LS_AREA_ORG_EXTRA = "ptasks_area_org_extra_v1"; // { [areaId]: [chaves de pessoas específicas incluídas manualmente] }
 
 function loadAreas() {
   try {
@@ -99,6 +100,10 @@ function loadAreaOrgLabelStore() {
   try { return JSON.parse(localStorage.getItem(LS_AREA_ORG_LABEL) || "{}"); } catch { return {}; }
 }
 function saveAreaOrgLabelStore(store) { localStorage.setItem(LS_AREA_ORG_LABEL, JSON.stringify(store)); }
+function loadAreaOrgExtraStore() {
+  try { return JSON.parse(localStorage.getItem(LS_AREA_ORG_EXTRA) || "{}"); } catch { return {}; }
+}
+function saveAreaOrgExtraStore(store) { localStorage.setItem(LS_AREA_ORG_EXTRA, JSON.stringify(store)); }
 
 function normalizeLabel(s) {
   return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
@@ -189,6 +194,10 @@ function asLabelList(v) {
   return [];
 }
 
+// Identificador estável de uma pessoa na planilha, para selecionar indivíduos específicos
+// (ex: C-levels que ficam num departamento corporativo à parte) independente da área deles.
+function personKey(r) { return r.matricula || normalizeLabel(r.nome); }
+
 // Resolve quais valores brutos da coluna de área correspondem a uma área do app, nesta ordem:
 // de-para fixo -> escolha lembrada de uma importação anterior -> correspondência única por nome.
 // Retorna null quando não há certeza suficiente (aí é preciso perguntar na prévia).
@@ -207,16 +216,26 @@ function resolveLabelsForArea(area, distinctLabels) {
   return matches.length === 1 ? matches : null;
 }
 
-function applyPeopleForArea(areaId, records, labels) {
-  const people = records
-    .filter((r) => labels.includes(r.area))
-    .map((r) => ({ id: r.matricula || uidArea(), nome: r.nome, cargo: r.cargo, chefia: r.chefia }));
+function applyPeopleForArea(areaId, records, labels, extraKeys) {
+  extraKeys = extraKeys || [];
+  const byKey = new Map(records.map((r) => [personKey(r), r]));
+  const selected = new Map();
+  records.filter((r) => labels.includes(r.area)).forEach((r) => selected.set(personKey(r), r));
+  extraKeys.forEach((k) => { const r = byKey.get(k); if (r) selected.set(k, r); });
+
+  const people = Array.from(selected.values()).map((r) => ({ id: r.matricula || uidArea(), nome: r.nome, cargo: r.cargo, chefia: r.chefia }));
   const store = loadAreaOrgStore();
   store[areaId] = people;
   saveAreaOrgStore(store);
+
   const labelStore = loadAreaOrgLabelStore();
   labelStore[areaId] = labels;
   saveAreaOrgLabelStore(labelStore);
+
+  const extraStore = loadAreaOrgExtraStore();
+  extraStore[areaId] = extraKeys;
+  saveAreaOrgExtraStore(extraStore);
+
   return people.length;
 }
 
@@ -235,9 +254,10 @@ function handleOrgImportFile(file) {
 
     const labels = resolveLabelsForArea(area, parsed.distinctLabels);
     if (labels) {
-      applyOrgImportForLabels(labels);
+      const extraKeys = loadAreaOrgExtraStore()[area.id] || [];
+      applyOrgImportForLabels(labels, extraKeys);
     } else {
-      showOrgMapPicker(area.name, parsed.distinctLabels, []);
+      showOrgMapPicker(area.name, parsed.distinctLabels, [], []);
     }
   };
   reader.readAsText(file, "UTF-8");
@@ -251,12 +271,13 @@ function handleGlobalOrgImportFile(file) {
     pendingOrgImport = parsed;
 
     const areas = loadAreas();
+    const extraStore = loadAreaOrgExtraStore();
     let updatedAreas = 0, totalPeople = 0;
     const notFound = [];
     areas.forEach((area) => {
       const labels = resolveLabelsForArea(area, parsed.distinctLabels);
       if (!labels) { notFound.push(area.name); return; }
-      totalPeople += applyPeopleForArea(area.id, parsed.records, labels);
+      totalPeople += applyPeopleForArea(area.id, parsed.records, labels, extraStore[area.id] || []);
       updatedAreas++;
     });
 
@@ -269,14 +290,66 @@ function handleGlobalOrgImportFile(file) {
   reader.readAsText(file, "UTF-8");
 }
 
-function showOrgMapPicker(areaName, distinctLabels, preselected) {
+let selectedExtraPeople = new Map(); // key -> record, para a seção de pessoas específicas do picker atual
+
+function renderExtraPeopleSelected() {
+  const box = document.getElementById("orgMapPersonSelected");
+  const entries = Array.from(selectedExtraPeople.values());
+  box.innerHTML = entries.map((r) => `
+    <span class="org-map-chip" data-key="${escapeHtmlArea(personKey(r))}">
+      ${escapeHtmlArea(r.nome)}${r.cargo ? ` <small>(${escapeHtmlArea(r.cargo)})</small>` : ""}
+      <button type="button" class="org-map-chip-remove" title="Remover">✕</button>
+    </span>`).join("") || '<span class="org-map-chip-empty">Nenhuma pessoa extra selecionada.</span>';
+  box.querySelectorAll(".org-map-chip-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedExtraPeople.delete(btn.closest(".org-map-chip").dataset.key);
+      renderExtraPeopleSelected();
+    });
+  });
+}
+
+function renderExtraPeopleResults(query) {
+  const results = document.getElementById("orgMapPersonResults");
+  if (!query.trim() || !pendingOrgImport) { results.innerHTML = ""; return; }
+  const q = normalizeLabel(query);
+  const matches = pendingOrgImport.records
+    .filter((r) => normalizeLabel(r.nome).includes(q) && !selectedExtraPeople.has(personKey(r)))
+    .slice(0, 8);
+  results.innerHTML = matches.map((r) => `
+    <button type="button" class="org-map-person-result" data-key="${escapeHtmlArea(personKey(r))}">
+      + ${escapeHtmlArea(r.nome)}${r.cargo ? ` <small>(${escapeHtmlArea(r.cargo)})</small>` : ""}
+    </button>`).join("") || '<div class="org-map-chip-empty">Ninguém encontrado.</div>';
+  results.querySelectorAll(".org-map-person-result").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const r = pendingOrgImport.records.find((rec) => personKey(rec) === btn.dataset.key);
+      if (r) selectedExtraPeople.set(personKey(r), r);
+      document.getElementById("orgMapPersonSearch").value = "";
+      results.innerHTML = "";
+      renderExtraPeopleSelected();
+    });
+  });
+}
+
+function showOrgMapPicker(areaName, distinctLabels, preselectedLabels, preselectedExtraKeys) {
   document.getElementById("orgMapAreaName").textContent = areaName;
   const box = document.getElementById("orgMapCheckboxes");
   box.innerHTML = distinctLabels.map((l) => `
     <label class="org-map-checkbox">
-      <input type="checkbox" value="${escapeHtmlArea(l)}" ${preselected.includes(l) ? "checked" : ""} />
+      <input type="checkbox" value="${escapeHtmlArea(l)}" ${preselectedLabels.includes(l) ? "checked" : ""} />
       ${escapeHtmlArea(l)}
     </label>`).join("");
+
+  selectedExtraPeople = new Map();
+  if (pendingOrgImport) {
+    (preselectedExtraKeys || []).forEach((key) => {
+      const r = pendingOrgImport.records.find((rec) => personKey(rec) === key);
+      if (r) selectedExtraPeople.set(key, r);
+    });
+  }
+  document.getElementById("orgMapPersonSearch").value = "";
+  document.getElementById("orgMapPersonResults").innerHTML = "";
+  renderExtraPeopleSelected();
+
   document.getElementById("areaOrgMapPicker").classList.remove("hidden");
 }
 
@@ -288,13 +361,14 @@ function openOrgMapPickerForAdjust() {
     if (window.showToast) window.showToast("Importe o arquivo de novo para poder ajustar a seleção.");
     return;
   }
-  const preselected = asLabelList(loadAreaOrgLabelStore()[currentAreaId]);
-  showOrgMapPicker(area.name, pendingOrgImport.distinctLabels, preselected);
+  const preselectedLabels = asLabelList(loadAreaOrgLabelStore()[currentAreaId]);
+  const preselectedExtraKeys = loadAreaOrgExtraStore()[currentAreaId] || [];
+  showOrgMapPicker(area.name, pendingOrgImport.distinctLabels, preselectedLabels, preselectedExtraKeys);
 }
 
-function applyOrgImportForLabels(labels) {
+function applyOrgImportForLabels(labels, extraKeys) {
   if (!pendingOrgImport || !currentAreaId) return;
-  const count = applyPeopleForArea(currentAreaId, pendingOrgImport.records, labels);
+  const count = applyPeopleForArea(currentAreaId, pendingOrgImport.records, labels, extraKeys || []);
   document.getElementById("areaOrgMapPicker").classList.add("hidden");
   renderOrgChart(currentAreaId);
   if (window.showToast) window.showToast(`${count} pessoa(s) importada(s) para o organograma 🗂️`);
@@ -426,6 +500,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const orgLabelStore = loadAreaOrgLabelStore();
     delete orgLabelStore[areaId];
     saveAreaOrgLabelStore(orgLabelStore);
+    const orgExtraStore = loadAreaOrgExtraStore();
+    delete orgExtraStore[areaId];
+    saveAreaOrgExtraStore(orgExtraStore);
     if (typeof loadPeople === "function") {
       const removedIds = loadPeople().filter((p) => p.areaId === areaId).map((p) => p.id);
       savePeople(loadPeople().filter((p) => p.areaId !== areaId));
@@ -449,10 +526,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("btnOrgMapConfirm").addEventListener("click", () => {
     const labels = Array.from(document.querySelectorAll("#orgMapCheckboxes input:checked")).map((i) => i.value);
-    if (labels.length) applyOrgImportForLabels(labels);
-    else if (window.showToast) window.showToast("Selecione ao menos um valor.");
+    const extraKeys = Array.from(selectedExtraPeople.keys());
+    if (labels.length || extraKeys.length) applyOrgImportForLabels(labels, extraKeys);
+    else if (window.showToast) window.showToast("Selecione ao menos um valor ou uma pessoa.");
   });
   document.getElementById("btnOrgMapAdjust").addEventListener("click", openOrgMapPickerForAdjust);
+  document.getElementById("orgMapPersonSearch").addEventListener("input", (e) => renderExtraPeopleResults(e.target.value));
   document.getElementById("areaOrgGlobalImportFile").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) handleGlobalOrgImportFile(file);

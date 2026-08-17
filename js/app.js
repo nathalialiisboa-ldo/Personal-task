@@ -1200,4 +1200,24 @@
   $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
   setBoardMode(boardMode);
   checkDueReminders();
+
+  // ---------- Public hook for external bulk-adds (e.g. transcript import) ----------
+  window.PTasksAPI = {
+    addTask(partial) {
+      const now = Date.now();
+      const task = {
+        id: uid(), title: partial.title, space: partial.space || "todos", status: "todo", priority: "medium",
+        category: partial.category || "", due: partial.due || null, dueTime: null, description: "",
+        subtasks: [], comments: [], recurrence: null, attachmentCount: 0,
+        createdAt: now, updatedAt: now, completedAt: null,
+      };
+      tasks.unshift(task);
+      logActivity("created", task.id, { title: task.title });
+      return task;
+    },
+    commitTasks() {
+      saveTasks();
+      renderBoard();
+    },
+  };
 })();

@@ -70,6 +70,7 @@
       if (view === "board" && btn.dataset.space) {
         currentSpace = btn.dataset.space;
         $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
+        applyFiltersForSpace(currentSpace);
         renderBoard();
       }
       if (view === "dashboard") renderDashboard();
@@ -133,11 +134,38 @@
     renderBoard();
   }
 
-  // ---------- Filters wiring ----------
-  $$(".check-filter input").forEach((cb) => cb.addEventListener("change", renderBoard));
-  searchInput.addEventListener("input", renderBoard);
-  sortSelect.addEventListener("change", renderBoard);
-  categoryFilter.addEventListener("change", renderBoard);
+  // ---------- Filters wiring (persisted per aba/espaço) ----------
+  const LS_FILTERS = "ptasks_filters_v1";
+  let pendingCategoryFilter = null;
+  function loadFiltersStore() { return loadJSON(LS_FILTERS, {}); }
+  function saveFiltersForCurrentSpace() {
+    const store = loadFiltersStore();
+    store[currentSpace] = {
+      search: searchInput.value,
+      sort: sortSelect.value,
+      category: categoryFilter.value,
+      statuses: $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"], .check-filter input[value="canceled"]').filter((b) => b.checked).map((b) => b.value),
+      priorities: $$('.check-filter input[value="urgent"], .check-filter input[value="high"], .check-filter input[value="medium"], .check-filter input[value="low"]').filter((b) => b.checked).map((b) => b.value),
+    };
+    localStorage.setItem(LS_FILTERS, JSON.stringify(store));
+  }
+  function applyFiltersForSpace(space) {
+    const f = loadFiltersStore()[space];
+    if (!f) return;
+    searchInput.value = f.search || "";
+    if (f.sort) sortSelect.value = f.sort;
+    pendingCategoryFilter = f.category || "";
+    if (Array.isArray(f.statuses)) {
+      $$('.check-filter input[value="todo"], .check-filter input[value="doing"], .check-filter input[value="done"], .check-filter input[value="canceled"]').forEach((cb) => { cb.checked = f.statuses.includes(cb.value); });
+    }
+    if (Array.isArray(f.priorities)) {
+      $$('.check-filter input[value="urgent"], .check-filter input[value="high"], .check-filter input[value="medium"], .check-filter input[value="low"]').forEach((cb) => { cb.checked = f.priorities.includes(cb.value); });
+    }
+  }
+  $$(".check-filter input").forEach((cb) => cb.addEventListener("change", () => { saveFiltersForCurrentSpace(); renderBoard(); }));
+  searchInput.addEventListener("input", () => { saveFiltersForCurrentSpace(); renderBoard(); });
+  sortSelect.addEventListener("change", () => { saveFiltersForCurrentSpace(); renderBoard(); });
+  categoryFilter.addEventListener("change", () => { saveFiltersForCurrentSpace(); renderBoard(); });
 
   // ---------- Collapsible sidebar sections ----------
   const LS_COLLAPSED_SECTIONS = "ptasks_collapsed_sections_v1";
@@ -169,7 +197,8 @@
       ...tasks.map((t) => t.category).filter(Boolean),
       ...loadCustomThemes()[currentSpace] || [],
     ])).sort();
-    const currentVal = categoryFilter.value;
+    const currentVal = pendingCategoryFilter !== null ? pendingCategoryFilter : categoryFilter.value;
+    pendingCategoryFilter = null;
     categoryFilter.innerHTML = '<option value="">Todas</option>' + cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
     if (cats.includes(currentVal)) categoryFilter.value = currentVal;
     $("#categoryList").innerHTML = cats.map((c) => `<option value="${escapeHtml(c)}">`).join("");
@@ -1198,6 +1227,7 @@
     topnavDate.textContent = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
   }
   $("#spaceTitle").textContent = SPACE_LABEL[currentSpace] || currentSpace;
+  applyFiltersForSpace(currentSpace);
   setBoardMode(boardMode);
   checkDueReminders();
 

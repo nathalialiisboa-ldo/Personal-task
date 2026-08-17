@@ -319,6 +319,7 @@
           <div class="org-chart-header">
             <h4>🗂️ Organograma</h4>
             <div class="spacer"></div>
+            <button type="button" id="btnOrgMapAdjust" class="btn btn-ghost btn-sm" title="Escolher manualmente quais valores da planilha pertencem a esta área">🔁 Ajustar seleção</button>
             <label for="areaOrgImportFile" class="btn btn-ghost btn-sm">📥 Importar base de ativos</label>
             <input type="file" id="areaOrgImportFile" accept=".csv" hidden />
           </div>
@@ -328,12 +329,10 @@
             cargo, área e liderança direta, e filtra automaticamente as pessoas desta área.
           </p>
           <div id="areaOrgMapPicker" class="org-chart-map-picker hidden">
-            <label>Não encontrei "<strong id="orgMapAreaName"></strong>" automaticamente na coluna de área do
-              arquivo. Selecione qual valor corresponde a esta área:</label>
-            <div class="org-chart-map-row">
-              <select id="orgMapSelect"></select>
-              <button type="button" id="btnOrgMapConfirm" class="btn btn-primary btn-sm">Usar este</button>
-            </div>
+            <label>Selecione quais valores da coluna de área da planilha pertencem a "<strong id="orgMapAreaName"></strong>"
+              (pode marcar mais de um):</label>
+            <div id="orgMapCheckboxes" class="org-chart-map-checkboxes"></div>
+            <button type="button" id="btnOrgMapConfirm" class="btn btn-primary btn-sm">Usar esta seleção</button>
           </div>
           <div id="areaOrgChart" class="org-chart"></div>
         </div>

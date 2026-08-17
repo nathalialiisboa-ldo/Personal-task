@@ -142,13 +142,14 @@ function findColumnIndex(headers, patterns, fallbackIndex) {
 
 // Correspondência fixa entre o nome da área no app e o valor usado na coluna de área da
 // planilha de ativos — evita ter que confirmar manualmente toda vez para essas áreas conhecidas.
+// Cada área pode corresponder a mais de um valor bruto na coluna (ex: "Mkt & Growth" reúne
+// dois centros de resultado diferentes na planilha) — por isso os valores são sempre uma lista.
 const AREA_ORG_LABEL_MAP = {
-  "gente & gestão": "Gente e Gestão",
-  "financeiro": "Financeiro",
-  "estratégia": "Estratégia",
-  "mkt & growth": "BCM e Growth",
-  "comercial": "Comercial",
-  "costumer experience": "Experiência do Cliente",
+  "gente & gestão": ["Gente e Gestão"],
+  "financeiro": ["Financeiro"],
+  "estratégia": ["Estratégia"],
+  "comercial": ["Comercial"],
+  "costumer experience": ["Experiência do Cliente"],
 };
 const AREA_ORG_LABEL_MAP_NORM = Object.fromEntries(
   Object.entries(AREA_ORG_LABEL_MAP).map(([k, v]) => [normalizeLabel(k), v])
@@ -181,37 +182,45 @@ function parseCSVFile(text) {
   return { records, distinctLabels };
 }
 
-// Resolve qual valor bruto da coluna de área corresponde a uma área do app, nesta ordem:
-// de-para fixo -> escolha lembrada de uma importação anterior -> correspondência única por nome.
-function resolveLabelForArea(area, distinctLabels) {
-  const fixed = AREA_ORG_LABEL_MAP_NORM[normalizeLabel(area.name)];
-  if (fixed && distinctLabels.includes(fixed)) return fixed;
+// Normaliza uma escolha lembrada (formato antigo era string única) para sempre virar uma lista.
+function asLabelList(v) {
+  if (Array.isArray(v)) return v;
+  if (v) return [v];
+  return [];
+}
 
-  const remembered = loadAreaOrgLabelStore()[area.id];
-  if (remembered && distinctLabels.includes(remembered)) return remembered;
+// Resolve quais valores brutos da coluna de área correspondem a uma área do app, nesta ordem:
+// de-para fixo -> escolha lembrada de uma importação anterior -> correspondência única por nome.
+// Retorna null quando não há certeza suficiente (aí é preciso perguntar na prévia).
+function resolveLabelsForArea(area, distinctLabels) {
+  const fixed = asLabelList(AREA_ORG_LABEL_MAP_NORM[normalizeLabel(area.name)]).filter((l) => distinctLabels.includes(l));
+  if (fixed.length) return fixed;
+
+  const remembered = asLabelList(loadAreaOrgLabelStore()[area.id]).filter((l) => distinctLabels.includes(l));
+  if (remembered.length) return remembered;
 
   const normalizedAreaName = normalizeLabel(area.name);
   const matches = distinctLabels.filter((l) => {
     const nl = normalizeLabel(l);
     return nl === normalizedAreaName || nl.includes(normalizedAreaName) || normalizedAreaName.includes(nl);
   });
-  return matches.length === 1 ? matches[0] : null;
+  return matches.length === 1 ? matches : null;
 }
 
-function applyPeopleForArea(areaId, records, label) {
+function applyPeopleForArea(areaId, records, labels) {
   const people = records
-    .filter((r) => r.area === label)
+    .filter((r) => labels.includes(r.area))
     .map((r) => ({ id: r.matricula || uidArea(), nome: r.nome, cargo: r.cargo, chefia: r.chefia }));
   const store = loadAreaOrgStore();
   store[areaId] = people;
   saveAreaOrgStore(store);
   const labelStore = loadAreaOrgLabelStore();
-  labelStore[areaId] = label;
+  labelStore[areaId] = labels;
   saveAreaOrgLabelStore(labelStore);
   return people.length;
 }
 
-let pendingOrgImport = null; // { records, distinctLabels }
+let pendingOrgImport = null; // { records, distinctLabels } — fica na memória para permitir ajustar a seleção depois
 
 function handleOrgImportFile(file) {
   const reader = new FileReader();
@@ -224,11 +233,11 @@ function handleOrgImportFile(file) {
     const area = loadAreas().find((a) => a.id === currentAreaId);
     if (!area) return;
 
-    const label = resolveLabelForArea(area, parsed.distinctLabels);
-    if (label) {
-      applyOrgImportForLabel(label);
+    const labels = resolveLabelsForArea(area, parsed.distinctLabels);
+    if (labels) {
+      applyOrgImportForLabels(labels);
     } else {
-      showOrgMapPicker(area.name, parsed.distinctLabels);
+      showOrgMapPicker(area.name, parsed.distinctLabels, []);
     }
   };
   reader.readAsText(file, "UTF-8");
@@ -239,51 +248,68 @@ function handleGlobalOrgImportFile(file) {
   reader.onload = () => {
     const parsed = parseCSVFile(String(reader.result));
     if (!parsed) { if (window.showToast) window.showToast("Arquivo vazio ou inválido."); return; }
+    pendingOrgImport = parsed;
 
     const areas = loadAreas();
     let updatedAreas = 0, totalPeople = 0;
     const notFound = [];
     areas.forEach((area) => {
-      const label = resolveLabelForArea(area, parsed.distinctLabels);
-      if (!label) { notFound.push(area.name); return; }
-      totalPeople += applyPeopleForArea(area.id, parsed.records, label);
+      const labels = resolveLabelsForArea(area, parsed.distinctLabels);
+      if (!labels) { notFound.push(area.name); return; }
+      totalPeople += applyPeopleForArea(area.id, parsed.records, labels);
       updatedAreas++;
     });
 
     if (currentAreaId && currentAreaSubtab === "estrutura") renderOrgChart(currentAreaId);
 
     const summary = `Organogramas atualizados: ${updatedAreas} área(s), ${totalPeople} pessoa(s) 🗂️` +
-      (notFound.length ? ` — não encontrei: ${notFound.join(", ")}` : "");
+      (notFound.length ? ` — não encontrei: ${notFound.join(", ")} (ajuste manualmente na aba Estrutura de cada uma)` : "");
     if (window.showToast) window.showToast(summary);
   };
   reader.readAsText(file, "UTF-8");
 }
 
-function showOrgMapPicker(areaName, distinctLabels) {
+function showOrgMapPicker(areaName, distinctLabels, preselected) {
   document.getElementById("orgMapAreaName").textContent = areaName;
-  const sel = document.getElementById("orgMapSelect");
-  sel.innerHTML = distinctLabels.map((l) => `<option value="${escapeHtmlArea(l)}">${escapeHtmlArea(l)}</option>`).join("");
+  const box = document.getElementById("orgMapCheckboxes");
+  box.innerHTML = distinctLabels.map((l) => `
+    <label class="org-map-checkbox">
+      <input type="checkbox" value="${escapeHtmlArea(l)}" ${preselected.includes(l) ? "checked" : ""} />
+      ${escapeHtmlArea(l)}
+    </label>`).join("");
   document.getElementById("areaOrgMapPicker").classList.remove("hidden");
 }
 
-function applyOrgImportForLabel(label) {
+function openOrgMapPickerForAdjust() {
+  if (!currentAreaId) return;
+  const area = loadAreas().find((a) => a.id === currentAreaId);
+  if (!area) return;
+  if (!pendingOrgImport) {
+    if (window.showToast) window.showToast("Importe o arquivo de novo para poder ajustar a seleção.");
+    return;
+  }
+  const preselected = asLabelList(loadAreaOrgLabelStore()[currentAreaId]);
+  showOrgMapPicker(area.name, pendingOrgImport.distinctLabels, preselected);
+}
+
+function applyOrgImportForLabels(labels) {
   if (!pendingOrgImport || !currentAreaId) return;
-  const count = applyPeopleForArea(currentAreaId, pendingOrgImport.records, label);
+  const count = applyPeopleForArea(currentAreaId, pendingOrgImport.records, labels);
   document.getElementById("areaOrgMapPicker").classList.add("hidden");
-  pendingOrgImport = null;
   renderOrgChart(currentAreaId);
   if (window.showToast) window.showToast(`${count} pessoa(s) importada(s) para o organograma 🗂️`);
 }
 
-function orgNodeHTML(person) {
+function orgNodeHTML(person, hasChildren) {
   const initial = (person.nome || "?").trim().charAt(0).toUpperCase();
   return `
-  <div class="org-node">
+  <div class="org-node ${hasChildren ? "has-children" : ""}">
     <span class="org-node-avatar">${escapeHtmlArea(initial)}</span>
     <span class="org-node-text">
       <span class="org-node-name">${escapeHtmlArea(person.nome)}</span>
       ${person.cargo ? `<span class="org-node-role">${escapeHtmlArea(person.cargo)}</span>` : ""}
     </span>
+    ${hasChildren ? '<span class="org-node-toggle">▾</span>' : ""}
   </div>`;
 }
 
@@ -305,13 +331,15 @@ function buildOrgTreeHTML(people) {
     }
   });
 
+  // Recolhido por padrão: só a liderança aparece de início, clicar revela os subordinados.
   function renderNode(person, visited) {
     const key = normalizeLabel(person.nome);
-    if (visited.has(key)) return `<li>${orgNodeHTML(person)}</li>`;
+    if (visited.has(key)) return `<li>${orgNodeHTML(person, false)}</li>`;
     visited.add(key);
     const kids = childrenByParent.get(key) || [];
-    const childrenHTML = kids.length ? `<ul>${kids.map((k) => renderNode(k, visited)).join("")}</ul>` : "";
-    return `<li>${orgNodeHTML(person)}${childrenHTML}</li>`;
+    const hasChildren = kids.length > 0;
+    const childrenHTML = hasChildren ? `<ul>${kids.map((k) => renderNode(k, visited)).join("")}</ul>` : "";
+    return `<li class="${hasChildren ? "collapsed" : ""}">${orgNodeHTML(person, hasChildren)}${childrenHTML}</li>`;
   }
 
   const visited = new Set();
@@ -323,6 +351,11 @@ function renderOrgChart(areaId) {
   if (!container) return;
   const people = loadAreaOrgStore()[areaId] || [];
   container.innerHTML = buildOrgTreeHTML(people);
+  container.querySelectorAll(".org-node.has-children").forEach((node) => {
+    node.addEventListener("click", () => {
+      node.closest("li").classList.toggle("collapsed");
+    });
+  });
 }
 
 // ---------- Area create/rename modal ----------
@@ -415,9 +448,11 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.value = "";
   });
   document.getElementById("btnOrgMapConfirm").addEventListener("click", () => {
-    const label = document.getElementById("orgMapSelect").value;
-    if (label) applyOrgImportForLabel(label);
+    const labels = Array.from(document.querySelectorAll("#orgMapCheckboxes input:checked")).map((i) => i.value);
+    if (labels.length) applyOrgImportForLabels(labels);
+    else if (window.showToast) window.showToast("Selecione ao menos um valor.");
   });
+  document.getElementById("btnOrgMapAdjust").addEventListener("click", openOrgMapPickerForAdjust);
   document.getElementById("areaOrgGlobalImportFile").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (file) handleGlobalOrgImportFile(file);

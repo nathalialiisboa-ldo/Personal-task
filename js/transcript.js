@@ -60,9 +60,9 @@ function textToSimpleHtml(text) {
   return blocks.map((block) => {
     const lines = block.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (!lines.length) return "";
-    const allBullets = lines.every((l) => TR_BULLET_RE.test(l));
+    const allBullets = lines.every((l) => TR_BULLET_STRIP_RE.test(l));
     if (allBullets) {
-      return "<ul>" + lines.map((l) => `<li>${escapeHtmlTr(l.match(TR_BULLET_RE)[1])}</li>`).join("") + "</ul>";
+      return "<ul>" + lines.map((l) => `<li>${escapeHtmlTr(l.replace(TR_BULLET_STRIP_RE, ""))}</li>`).join("") + "</ul>";
     }
     return "<p>" + lines.map(escapeHtmlTr).join("<br>") + "</p>";
   }).join("");

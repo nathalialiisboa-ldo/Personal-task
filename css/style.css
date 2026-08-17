@@ -227,6 +227,7 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .btn-ghost:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-soft); }
 .btn-danger-ghost { background: transparent; color: var(--danger); border: 1px solid var(--danger-soft); }
 .btn-danger-ghost:hover { background: var(--danger-soft); }
+.btn-sm { padding: 6px 12px; font-size: .8rem; }
 
 /* Main */
 .main { padding: 22px 28px 60px; overflow-x: hidden; }
@@ -511,6 +512,32 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .oneonone-entry-body h3 { margin: 10px 0 6px; font-size: 1.02rem; }
 .oneonone-person-modal { max-width: 380px; }
 .oneonone-entry-date-field { max-width: 200px; }
+
+/* Organograma */
+.org-chart-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.org-chart-header h4 { margin: 0; font-size: .95rem; }
+.org-chart-map-picker { background: var(--warning-soft); border: 1px solid var(--warning); border-radius: var(--radius-sm); padding: 10px 12px; margin: 8px 0; font-size: .84rem; }
+.org-chart-map-picker label { display: block; margin-bottom: 8px; }
+.org-chart-map-row { display: flex; gap: 8px; align-items: center; }
+.org-chart-map-row select { flex: 1; max-width: 320px; }
+.org-chart { margin: 12px 0 20px; overflow-x: auto; }
+.org-chart-empty { color: var(--text-muted); font-size: .86rem; padding: 8px 0; }
+.org-tree, .org-tree ul { list-style: none; margin: 0; padding-left: 26px; }
+.org-tree { padding-left: 0; }
+.org-tree li { position: relative; padding: 8px 0 0 0; }
+.org-tree > li { padding-top: 8px; }
+.org-tree > li:first-child { padding-top: 0; }
+.org-tree ul li { padding-left: 22px; }
+.org-tree ul li::before {
+  content: ""; position: absolute; top: 0; left: 0; width: 18px; height: 26px;
+  border-left: 2px solid var(--border); border-bottom: 2px solid var(--border); border-radius: 0 0 0 6px;
+}
+.org-tree ul li::after { content: ""; position: absolute; top: 26px; bottom: 0; left: 0; border-left: 2px solid var(--border); }
+.org-tree ul li:last-child::after { display: none; }
+.org-node { display: inline-flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px; box-shadow: var(--shadow); }
+.org-node-name { font-weight: 700; font-size: .85rem; }
+.org-node-role { color: var(--text-muted); font-size: .72rem; }
+.area-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
 /* Áreas de Atendimento */
 .area-subtabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }

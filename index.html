@@ -313,6 +313,29 @@
       </div>
 
       <div class="area-subview active" data-subview="estrutura">
+        <div class="org-chart-section">
+          <div class="org-chart-header">
+            <h4>🗂️ Organograma</h4>
+            <div class="spacer"></div>
+            <label for="areaOrgImportFile" class="btn btn-ghost btn-sm">📥 Importar base de ativos</label>
+            <input type="file" id="areaOrgImportFile" accept=".csv" hidden />
+          </div>
+          <p class="field-hint">
+            Aceita um arquivo <code>.csv</code> exportado da sua planilha de ativos (Arquivo → Fazer
+            download → Valores separados por vírgula). O app identifica sozinho as colunas de nome,
+            cargo, área e liderança direta, e filtra automaticamente as pessoas desta área.
+          </p>
+          <div id="areaOrgMapPicker" class="org-chart-map-picker hidden">
+            <label>Não encontrei "<strong id="orgMapAreaName"></strong>" automaticamente na coluna de área do
+              arquivo. Selecione qual valor corresponde a esta área:</label>
+            <div class="org-chart-map-row">
+              <select id="orgMapSelect"></select>
+              <button type="button" id="btnOrgMapConfirm" class="btn btn-primary btn-sm">Usar este</button>
+            </div>
+          </div>
+          <div id="areaOrgChart" class="org-chart"></div>
+        </div>
+        <hr class="area-divider" />
         <div class="note-toolbar" id="areaEstruturaToolbar">
           <button type="button" class="note-tb-btn" data-cmd="bold" title="Negrito"><b>N</b></button>
           <button type="button" class="note-tb-btn" data-cmd="italic" title="Itálico"><i>I</i></button>

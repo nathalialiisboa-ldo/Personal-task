@@ -3,6 +3,8 @@
 
 const LS_AREAS = "ptasks_areas_v1";
 const LS_AREA_DOCS = "ptasks_area_docs_v1"; // [{id, areaId, type: "estrutura"|"orcamento", html, updatedAt}]
+const LS_AREA_ORG = "ptasks_area_org_v1"; // { [areaId]: [{id, nome, cargo, chefia}] } — só o essencial, nada de dados sensíveis
+const LS_AREA_ORG_LABEL = "ptasks_area_org_label_v1"; // { [areaId]: "valor bruto da coluna de área escolhido da última vez" }
 
 function loadAreas() {
   try {
@@ -77,11 +79,193 @@ function setAreaSubtab(subtab) {
   document.querySelectorAll(".area-subtab").forEach((btn) => btn.classList.toggle("active", btn.dataset.subtab === subtab));
   document.querySelectorAll(".area-subview").forEach((el) => el.classList.toggle("active", el.dataset.subview === subtab));
   if (!currentAreaId) return;
-  if (subtab === "estrutura") loadEditorContent("areaEstruturaEditor", currentAreaId, "estrutura");
+  if (subtab === "estrutura") {
+    loadEditorContent("areaEstruturaEditor", currentAreaId, "estrutura");
+    renderOrgChart(currentAreaId);
+    document.getElementById("areaOrgMapPicker").classList.add("hidden");
+  }
   if (subtab === "orcamento") loadEditorContent("areaOrcamentoEditor", currentAreaId, "orcamento");
   if (subtab === "oneonones" && typeof mountOneOnOnes === "function") {
     mountOneOnOnes(document.getElementById("areaOOMount"), currentAreaId);
   }
+}
+
+// ---------- Organograma (importado de uma "base de ativos" em .csv) ----------
+// Guarda só o essencial (nome, cargo, liderança direta) — nunca CPF, salário, endereço etc.
+function loadAreaOrgStore() {
+  try { return JSON.parse(localStorage.getItem(LS_AREA_ORG) || "{}"); } catch { return {}; }
+}
+function saveAreaOrgStore(store) { localStorage.setItem(LS_AREA_ORG, JSON.stringify(store)); }
+function loadAreaOrgLabelStore() {
+  try { return JSON.parse(localStorage.getItem(LS_AREA_ORG_LABEL) || "{}"); } catch { return {}; }
+}
+function saveAreaOrgLabelStore(store) { localStorage.setItem(LS_AREA_ORG_LABEL, JSON.stringify(store)); }
+
+function normalizeLabel(s) {
+  return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+}
+
+function parseCSVArea(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+      } else {
+        field += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ",") {
+      row.push(field); field = "";
+    } else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      row = [];
+    } else {
+      field += c;
+    }
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function findColumnIndex(headers, patterns, fallbackIndex) {
+  for (const re of patterns) {
+    const idx = headers.findIndex((h) => re.test(h.trim()));
+    if (idx !== -1) return idx;
+  }
+  return fallbackIndex;
+}
+
+let pendingOrgImport = null; // { records, distinctLabels }
+
+function handleOrgImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const rows = parseCSVArea(String(reader.result));
+    if (rows.length < 2) { if (window.showToast) window.showToast("Arquivo vazio ou inválido."); return; }
+    const headers = rows[0];
+    const dataRows = rows.slice(1);
+
+    const areaColIdx = findColumnIndex(headers, [/centro de resultado/i, /^área$/i, /^area$/i], 6);
+    const leadColIdx = findColumnIndex(headers, [/chefia imediata/i, /lideran[çc]a direta/i], 10);
+    const nomeColIdx = findColumnIndex(headers, [/^nome$/i], 1);
+    const cargoColIdx = findColumnIndex(headers, [/^fun[çc][ãa]o$/i, /^cargo$/i], -1);
+    const matriculaColIdx = findColumnIndex(headers, [/^matr[íi]cula$/i], 0);
+
+    const records = dataRows
+      .filter((r) => r.some((cell) => cell.trim() !== ""))
+      .map((r) => ({
+        matricula: (r[matriculaColIdx] || "").trim(),
+        nome: (r[nomeColIdx] || "").trim(),
+        cargo: cargoColIdx >= 0 ? (r[cargoColIdx] || "").trim() : "",
+        area: (r[areaColIdx] || "").trim(),
+        chefia: (r[leadColIdx] || "").trim(),
+      }))
+      .filter((r) => r.nome);
+
+    const distinctLabels = Array.from(new Set(records.map((r) => r.area).filter(Boolean)));
+    pendingOrgImport = { records, distinctLabels };
+
+    if (!currentAreaId) return;
+    const area = loadAreas().find((a) => a.id === currentAreaId);
+    if (!area) return;
+
+    const rememberedLabel = loadAreaOrgLabelStore()[currentAreaId];
+    if (rememberedLabel && distinctLabels.includes(rememberedLabel)) {
+      applyOrgImportForLabel(rememberedLabel);
+      return;
+    }
+
+    const normalizedAreaName = normalizeLabel(area.name);
+    const matches = distinctLabels.filter((l) => {
+      const nl = normalizeLabel(l);
+      return nl === normalizedAreaName || nl.includes(normalizedAreaName) || normalizedAreaName.includes(nl);
+    });
+    if (matches.length === 1) {
+      applyOrgImportForLabel(matches[0]);
+    } else {
+      showOrgMapPicker(area.name, distinctLabels);
+    }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+function showOrgMapPicker(areaName, distinctLabels) {
+  document.getElementById("orgMapAreaName").textContent = areaName;
+  const sel = document.getElementById("orgMapSelect");
+  sel.innerHTML = distinctLabels.map((l) => `<option value="${escapeHtmlArea(l)}">${escapeHtmlArea(l)}</option>`).join("");
+  document.getElementById("areaOrgMapPicker").classList.remove("hidden");
+}
+
+function applyOrgImportForLabel(label) {
+  if (!pendingOrgImport || !currentAreaId) return;
+  const people = pendingOrgImport.records
+    .filter((r) => r.area === label)
+    .map((r) => ({ id: r.matricula || uidArea(), nome: r.nome, cargo: r.cargo, chefia: r.chefia }));
+
+  const store = loadAreaOrgStore();
+  store[currentAreaId] = people;
+  saveAreaOrgStore(store);
+
+  const labelStore = loadAreaOrgLabelStore();
+  labelStore[currentAreaId] = label;
+  saveAreaOrgLabelStore(labelStore);
+
+  document.getElementById("areaOrgMapPicker").classList.add("hidden");
+  pendingOrgImport = null;
+  renderOrgChart(currentAreaId);
+  if (window.showToast) window.showToast(`${people.length} pessoa(s) importada(s) para o organograma 🗂️`);
+}
+
+function orgNodeHTML(person) {
+  return `
+  <div class="org-node">
+    <span class="org-node-name">${escapeHtmlArea(person.nome)}</span>
+    ${person.cargo ? `<span class="org-node-role">${escapeHtmlArea(person.cargo)}</span>` : ""}
+  </div>`;
+}
+
+function buildOrgTreeHTML(people) {
+  if (!people.length) return '<div class="org-chart-empty">Nenhum organograma importado ainda para esta área.</div>';
+
+  const byNormName = new Map(people.map((p) => [normalizeLabel(p.nome), p]));
+  const childrenByParent = new Map();
+  const roots = [];
+  people.forEach((p) => {
+    const parentKey = normalizeLabel(p.chefia);
+    const parent = parentKey && byNormName.get(parentKey);
+    if (parent && parent !== p) {
+      const key = normalizeLabel(parent.nome);
+      if (!childrenByParent.has(key)) childrenByParent.set(key, []);
+      childrenByParent.get(key).push(p);
+    } else {
+      roots.push(p);
+    }
+  });
+
+  function renderNode(person, visited) {
+    const key = normalizeLabel(person.nome);
+    if (visited.has(key)) return `<li>${orgNodeHTML(person)}</li>`;
+    visited.add(key);
+    const kids = childrenByParent.get(key) || [];
+    const childrenHTML = kids.length ? `<ul>${kids.map((k) => renderNode(k, visited)).join("")}</ul>` : "";
+    return `<li>${orgNodeHTML(person)}${childrenHTML}</li>`;
+  }
+
+  const visited = new Set();
+  return `<ul class="org-tree">${roots.map((r) => renderNode(r, visited)).join("")}</ul>`;
+}
+
+function renderOrgChart(areaId) {
+  const container = document.getElementById("areaOrgChart");
+  if (!container) return;
+  const people = loadAreaOrgStore()[areaId] || [];
+  container.innerHTML = buildOrgTreeHTML(people);
 }
 
 // ---------- Area create/rename modal ----------
@@ -146,6 +330,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const areaId = currentAreaId;
     saveAreas(loadAreas().filter((a) => a.id !== areaId));
     saveAreaDocs(loadAreaDocs().filter((d) => d.areaId !== areaId));
+    const orgStore = loadAreaOrgStore();
+    delete orgStore[areaId];
+    saveAreaOrgStore(orgStore);
+    const orgLabelStore = loadAreaOrgLabelStore();
+    delete orgLabelStore[areaId];
+    saveAreaOrgLabelStore(orgLabelStore);
     if (typeof loadPeople === "function") {
       const removedIds = loadPeople().filter((p) => p.areaId === areaId).map((p) => p.id);
       savePeople(loadPeople().filter((p) => p.areaId !== areaId));
@@ -160,6 +350,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.querySelectorAll(".area-subtab").forEach((btn) => {
     btn.addEventListener("click", () => setAreaSubtab(btn.dataset.subtab));
+  });
+
+  document.getElementById("areaOrgImportFile").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (file) handleOrgImportFile(file);
+    e.target.value = "";
+  });
+  document.getElementById("btnOrgMapConfirm").addEventListener("click", () => {
+    const label = document.getElementById("orgMapSelect").value;
+    if (label) applyOrgImportForLabel(label);
   });
 
   // Estrutura / Orçamento: formatting toolbars + autosave on blur

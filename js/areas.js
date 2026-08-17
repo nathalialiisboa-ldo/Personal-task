@@ -80,7 +80,6 @@ function setAreaSubtab(subtab) {
   document.querySelectorAll(".area-subview").forEach((el) => el.classList.toggle("active", el.dataset.subview === subtab));
   if (!currentAreaId) return;
   if (subtab === "estrutura") {
-    loadEditorContent("areaEstruturaEditor", currentAreaId, "estrutura");
     renderOrgChart(currentAreaId);
     document.getElementById("areaOrgMapPicker").classList.add("hidden");
   }
@@ -425,8 +424,8 @@ document.addEventListener("DOMContentLoaded", () => {
     e.target.value = "";
   });
 
-  // Estrutura / Orçamento: formatting toolbars + autosave on blur
-  [["Estrutura", "estrutura"], ["Orcamento", "orcamento"]].forEach(([idPart, type]) => {
+  // Orçamento (desativado por ora, mas o editor continua no DOM): formatting toolbar + autosave on blur
+  [["Orcamento", "orcamento"]].forEach(([idPart, type]) => {
     const editorId = `area${idPart}Editor`;
     document.querySelectorAll(`#area${idPart}Toolbar .note-tb-btn`).forEach((btn) => {
       btn.addEventListener("mousedown", (e) => e.preventDefault());

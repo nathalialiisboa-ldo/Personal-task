@@ -8,8 +8,11 @@ function escapeHtmlTr(str) {
 function todayISOTr() { return new Date().toISOString().slice(0, 10); }
 
 // ---------- Heuristic: extract candidate tasks from free text ----------
-const TR_BULLET_RE = /^\s*(?:[-*•▪●]|\[\s?\]|\[x\]|✓|✔)\s+(.+)$/i;
-const TR_ACTION_PREFIX_RE = /^\s*(?:to-?do|a\s*fazer|a[cç][aã]o(?:\s*item)?|next\s*step)s?\s*[:\-]\s*(.+)$/i;
+// Every non-empty line becomes a candidate (no bullet or date required) — the preview
+// step is where the user curates, so it's better to over-surface than to silently drop lines.
+const TR_BULLET_STRIP_RE = /^\s*(?:[-*•▪●○‣–—]|\[\s?\]|\[x\]|✓|✔|\d+[.)])\s*/i;
+const TR_LABEL_ONLY_RE = /^.{1,40}:$/; // short line ending in ":" (e.g. "Próximos passos:") — treated as a label, not a task
+const TR_MAX_LINE_LEN = 220; // very long lines are probably prose, not a single task title
 const TR_DATE_RE = /\b([0-3]?\d)[\/\.]([01]?\d)(?:[\/\.](\d{2,4}))?\b/;
 
 function extractDueDate(text) {
@@ -27,15 +30,28 @@ function parseTasksFromText(text) {
   const lines = text.split(/\r?\n/);
   const results = [];
   for (const raw of lines) {
-    const line = raw.trim();
+    let line = raw.trim();
     if (!line) continue;
-    const bulletMatch = line.match(TR_BULLET_RE);
-    const actionMatch = !bulletMatch && line.match(TR_ACTION_PREFIX_RE);
-    const content = bulletMatch ? bulletMatch[1] : (actionMatch ? actionMatch[1] : null);
-    if (!content) continue;
-    results.push({ title: content.trim(), due: extractDueDate(content) });
+    if (TR_LABEL_ONLY_RE.test(line)) continue;
+    if (line.length > TR_MAX_LINE_LEN) continue;
+    line = line.replace(TR_BULLET_STRIP_RE, "").trim();
+    if (!line) continue;
+    results.push({ title: line, due: extractDueDate(line) });
   }
   return results;
+}
+
+// ---------- Themes available for a task space (existing categories + custom empty themes) ----------
+function getThemesForSpace(space) {
+  let tasks = [];
+  try { tasks = JSON.parse(localStorage.getItem("ptasks_tasks_v1") || "[]"); } catch { tasks = []; }
+  let customThemes = {};
+  try { customThemes = JSON.parse(localStorage.getItem("ptasks_customthemes_v1") || "{}"); } catch { customThemes = {}; }
+  const set = new Set([
+    ...tasks.filter((t) => (t.space || "todos") === space).map((t) => t.category).filter(Boolean),
+    ...(customThemes[space] || []),
+  ]);
+  return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 // ---------- Heuristic: plain text -> simple formatted HTML ----------
@@ -57,7 +73,6 @@ let trWorkingTasks = [];
 
 function resetTranscriptModal() {
   document.getElementById("transcriptInput").value = "";
-  document.getElementById("transcriptTaskCategory").value = "";
   document.getElementById("transcriptOODate").value = todayISOTr();
   document.getElementById("transcriptStep1").classList.remove("hidden");
   document.getElementById("transcriptTasksPreview").classList.add("hidden");
@@ -95,19 +110,39 @@ function toggleTranscriptNewPersonField() {
   document.getElementById("transcriptOONewPersonField").classList.toggle("hidden", !isNew);
 }
 
-function taskPreviewRowHTML(item, i) {
+function taskPreviewRowHTML(item, i, themes) {
+  const themeOptions = themes.map((t) => `<option value="${escapeHtmlTr(t)}">${escapeHtmlTr(t)}</option>`).join("");
   return `
   <div class="transcript-task-item" data-i="${i}">
-    <input type="checkbox" checked />
-    <input type="text" value="${escapeHtmlTr(item.title)}" />
-    <input type="date" value="${item.due || ""}" />
+    <div class="transcript-task-row1">
+      <input type="checkbox" checked />
+      <input type="text" value="${escapeHtmlTr(item.title)}" />
+    </div>
+    <div class="transcript-task-row2">
+      <select class="transcript-task-theme">
+        <option value="">Sem tema</option>
+        ${themeOptions}
+        <option value="__new__">+ Novo tema</option>
+      </select>
+      <input type="text" class="transcript-task-theme-new hidden" placeholder="Nome do novo tema" />
+      <input type="date" class="transcript-task-date" value="${item.due || ""}" />
+    </div>
   </div>`;
 }
 
 function renderTaskPreview() {
+  const space = document.getElementById("transcriptTaskSpace").value;
+  const themes = getThemesForSpace(space);
   const list = document.getElementById("transcriptTaskList");
-  list.innerHTML = trWorkingTasks.map(taskPreviewRowHTML).join("") ||
-    '<div class="transcript-empty">Nenhum item parecido com tarefa foi encontrado. Volte e revise o texto, ou use marcadores ("-") nas linhas de ação.</div>';
+  list.innerHTML = trWorkingTasks.map((item, i) => taskPreviewRowHTML(item, i, themes)).join("") ||
+    '<div class="transcript-empty">Nenhuma linha com texto foi encontrada. Volte e cole o conteúdo da transcrição.</div>';
+
+  list.querySelectorAll(".transcript-task-theme").forEach((sel) => {
+    sel.addEventListener("change", () => {
+      const newInput = sel.closest(".transcript-task-item").querySelector(".transcript-task-theme-new");
+      newInput.classList.toggle("hidden", sel.value !== "__new__");
+    });
+  });
 }
 
 function analyzeTranscript() {
@@ -128,15 +163,19 @@ function analyzeTranscript() {
 
 function confirmTasksFromPreview() {
   const space = document.getElementById("transcriptTaskSpace").value;
-  const category = document.getElementById("transcriptTaskCategory").value.trim();
   const rows = document.querySelectorAll("#transcriptTaskList .transcript-task-item");
   let count = 0;
   rows.forEach((row) => {
     const checked = row.querySelector('input[type="checkbox"]').checked;
     if (!checked) return;
-    const title = row.querySelector('input[type="text"]').value.trim();
+    const title = row.querySelector(".transcript-task-row1 input[type='text']").value.trim();
     if (!title) return;
-    const due = row.querySelector('input[type="date"]').value || null;
+    const due = row.querySelector(".transcript-task-date").value || null;
+    const themeSel = row.querySelector(".transcript-task-theme");
+    let category = themeSel.value;
+    if (category === "__new__") {
+      category = row.querySelector(".transcript-task-theme-new").value.trim();
+    }
     window.PTasksAPI.addTask({ title, space, category, due });
     count++;
   });

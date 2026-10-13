@@ -471,6 +471,22 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .note-row-preview { flex: 1; min-width: 0; font-size: .82rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .note-row-meta { flex-shrink: 0; font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
 
+/* Prioridades do dia */
+.priority-add { margin-bottom: 14px; }
+.priority-add input { width: 100%; max-width: 480px; font-size: .95rem; padding: 12px 16px; border-radius: 999px; }
+.priority-list { display: flex; flex-direction: column; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.priority-row { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--border); }
+.priority-row:first-child { border-top: none; }
+.priority-row-check {
+  width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); background: transparent;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: .78rem;
+}
+.priority-row-check.done { background: var(--primary); border-color: var(--primary); }
+.priority-row-text { flex: 1; font-size: .95rem; }
+.priority-row.done .priority-row-text { text-decoration: line-through; color: var(--text-muted); }
+.priority-row-delete { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: .9rem; padding: 4px 6px; border-radius: 6px; flex-shrink: 0; }
+.priority-row-delete:hover { background: var(--danger-soft); color: var(--danger); }
+
 .note-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
 .note-tb-btn { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 5px 9px; font-size: .8rem; cursor: pointer; color: var(--text); }
 .note-tb-btn:hover { background: var(--primary-soft); border-color: var(--primary-soft); color: var(--primary); }

@@ -41,6 +41,7 @@
     <button id="btnNewTask" class="btn btn-primary btn-block">+ Nova tarefa</button>
 
     <nav class="nav-views" id="spaceNav">
+      <button class="nav-item" data-view="priorities">⭐ Prioridades do dia</button>
       <button class="nav-item active" data-view="board" data-space="todos">✅ To do's</button>
       <button class="nav-item" data-view="board" data-space="1on1" hidden>🗣️ 1:1 Yás</button>
       <div class="nav-group">
@@ -245,6 +246,18 @@
         <button id="btnNewNote" class="btn btn-primary">+ Nova anotação</button>
       </header>
       <div id="notesGrid" class="notes-list"></div>
+    </section>
+
+    <!-- PRIORIDADES DO DIA VIEW -->
+    <section id="view-priorities" class="view">
+      <header class="topbar">
+        <h2>⭐ Prioridades do dia</h2>
+      </header>
+      <p class="notas-intro">Uma lista simples pra marcar o que é prioridade hoje. Fica do jeito que você deixar, sem reiniciar sozinha.</p>
+      <div class="priority-add">
+        <input type="text" id="priorityInput" placeholder="Adicionar prioridade e pressionar Enter" />
+      </div>
+      <div id="priorityList" class="priority-list"></div>
     </section>
 
     <!-- 1:1s VIEW -->
@@ -808,6 +821,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="js/db.js"></script>
+<script src="js/priorities.js"></script>
 <script src="js/entregaveis.js"></script>
 <script src="js/anotacoes.js"></script>
 <script src="js/oneonones.js"></script>

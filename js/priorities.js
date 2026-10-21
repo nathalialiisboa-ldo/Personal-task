@@ -20,7 +20,7 @@ function priorityRowHTML(item) {
   return `
   <div class="priority-row ${item.done ? "done" : ""}" data-id="${item.id}">
     <button type="button" class="priority-row-check ${item.done ? "done" : ""}" title="Marcar como feita">${item.done ? "✓" : ""}</button>
-    <span class="priority-row-text">${escapeHtmlPriority(item.text)}</span>
+    <input type="text" class="priority-row-text" value="${escapeHtmlPriority(item.text)}" />
     <button type="button" class="priority-row-delete" title="Remover">✕</button>
   </div>`;
 }
@@ -48,6 +48,29 @@ function renderPrioritiesView() {
       const id = btn.closest(".priority-row").dataset.id;
       savePriorities(loadPriorities().filter((i) => i.id !== id));
       renderPrioritiesView();
+    });
+  });
+  list.querySelectorAll(".priority-row-text").forEach((field) => {
+    const commit = () => {
+      const id = field.closest(".priority-row").dataset.id;
+      const text = field.value.trim();
+      const items = loadPriorities();
+      const item = items.find((i) => i.id === id);
+      if (!item) return;
+      if (!text) { field.value = item.text; return; }
+      if (text === item.text) return;
+      item.text = text;
+      savePriorities(items);
+    };
+    field.addEventListener("blur", commit);
+    field.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); field.blur(); }
+      if (e.key === "Escape") {
+        const id = field.closest(".priority-row").dataset.id;
+        const item = loadPriorities().find((i) => i.id === id);
+        if (item) field.value = item.text;
+        field.blur();
+      }
     });
   });
 }

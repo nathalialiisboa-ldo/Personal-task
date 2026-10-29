@@ -116,26 +116,19 @@ function sortByField(list, field, dir, getters) {
 
 function encontroRowHTML(e) {
   const statusClass = STATUS_CLASS_CRONO[e.status] || "st-pendente";
-  const lid = findLiderancaByNome(e.lideranca);
-  const proxima = e.status === "Realizado" && e.dataRealizada && lid && lid.cadenciaDias
-    ? formatDateCrono(addDaysISO(e.dataRealizada, lid.cadenciaDias))
-    : "—";
   return `
   <tr data-id="${e.id}">
     <td><input type="date" class="crono-data-sugerida" value="${e.dataSugerida || ""}" /></td>
     <td>${escapeHtmlCrono(e.lideranca)}</td>
     <td>${escapeHtmlCrono(e.area)}</td>
     <td>${escapeHtmlCrono(e.prioridade)}</td>
-    <td>${escapeHtmlCrono(e.tipoEncontro)}</td>
     <td>${e.duracaoMin ? e.duracaoMin + " min" : "—"}</td>
     <td>
       <select class="status-pill-cronograma ${statusClass} crono-status">
         ${Object.keys(STATUS_CLASS_CRONO).map((s) => `<option value="${s}" ${s === e.status ? "selected" : ""}>${s}</option>`).join("")}
       </select>
     </td>
-    <td><input type="date" class="crono-data-realizada" value="${e.dataRealizada || ""}" /></td>
-    <td>${proxima}</td>
-    <td><input type="text" class="pauta-inline crono-pauta" value="${escapeHtmlCrono(e.pauta)}" placeholder="Pauta..." /></td>
+    <td><input type="date" class="crono-proxima-prevista" value="${e.proximaPrevista || ""}" /></td>
     <td><button type="button" class="cronograma-row-delete" title="Remover">✕</button></td>
   </tr>`;
 }
@@ -174,20 +167,22 @@ function renderCronogramaTable() {
       const item = list.find((x) => x.id === id);
       if (!item) return;
       item.status = novoStatus;
-      if (novoStatus === "Realizado" && !item.dataRealizada) item.dataRealizada = todayISOCrono();
+      if (novoStatus === "Realizado" && !item.dataRealizada) {
+        item.dataRealizada = todayISOCrono();
+        const lid = findLiderancaByNome(item.lideranca);
+        if (!item.proximaPrevista && lid && lid.cadenciaDias) {
+          item.proximaPrevista = addDaysISO(item.dataRealizada, lid.cadenciaDias);
+        }
+      }
       item.updatedAt = Date.now();
       saveEncontros(list);
       renderCronogramaTable();
       renderCronogramaLeadersTable();
       renderCronogramaStats();
     });
-    tr.querySelector(".crono-data-realizada").addEventListener("change", (ev) => {
-      updateEncontroField(id, "dataRealizada", ev.target.value || null);
-      renderCronogramaTable();
-      renderCronogramaLeadersTable();
-      renderCronogramaStats();
+    tr.querySelector(".crono-proxima-prevista").addEventListener("change", (ev) => {
+      updateEncontroField(id, "proximaPrevista", ev.target.value || null);
     });
-    tr.querySelector(".crono-pauta").addEventListener("blur", (ev) => updateEncontroField(id, "pauta", ev.target.value.trim()));
     tr.querySelector(".cronograma-row-delete").addEventListener("click", () => {
       if (!confirm("Remover este encontro do cronograma?")) return;
       saveEncontros(loadEncontros().filter((x) => x.id !== id));
@@ -342,10 +337,8 @@ function openEncontroModal(id) {
   document.getElementById("encontroModalTitle").textContent = id ? "Editar encontro" : "Novo encontro";
   document.getElementById("encontroLiderancaInput").value = e ? e.lideranca : loadLiderancas()[0]?.nome || "";
   document.getElementById("encontroDataSugeridaInput").value = e ? e.dataSugerida || "" : todayISOCrono();
-  document.getElementById("encontroTipoInput").value = e ? e.tipoEncontro || "Alinhamento / follow-up" : "Alinhamento / follow-up";
   document.getElementById("encontroStatusInput").value = e ? e.status : "Pendente";
-  document.getElementById("encontroDataRealizadaInput").value = e ? e.dataRealizada || "" : "";
-  document.getElementById("encontroPautaInput").value = e ? e.pauta || "" : "";
+  document.getElementById("encontroProximaPrevistaInput").value = e ? e.proximaPrevista || "" : "";
   document.getElementById("encontroModal").classList.remove("hidden");
 }
 function closeEncontroModal() {
@@ -368,10 +361,9 @@ function saveEncontroFromModal() {
   item.prioridade = lid ? lid.prioridade : "";
   item.duracaoMin = lid ? lid.duracaoMin : null;
   item.dataSugerida = document.getElementById("encontroDataSugeridaInput").value || null;
-  item.tipoEncontro = document.getElementById("encontroTipoInput").value;
   item.status = document.getElementById("encontroStatusInput").value;
-  item.dataRealizada = document.getElementById("encontroDataRealizadaInput").value || null;
-  item.pauta = document.getElementById("encontroPautaInput").value.trim();
+  item.proximaPrevista = document.getElementById("encontroProximaPrevistaInput").value || null;
+  if (item.status === "Realizado" && !item.dataRealizada) item.dataRealizada = todayISOCrono();
   item.updatedAt = now;
   saveEncontros(list);
   closeEncontroModal();
@@ -414,7 +406,7 @@ function handleCronogramaImportFile(file) {
       }
     });
 
-    const dupKey = (x) => normalizeCrono(x.lideranca) + "|" + (x.dataSugerida || "") + "|" + normalizeCrono(x.tipoEncontro || "");
+    const dupKey = (x) => normalizeCrono(x.lideranca) + "|" + (x.dataSugerida || "");
     (data.encontros || []).forEach((e) => {
       if (!e.lideranca) return;
       const key = dupKey(e);
@@ -422,9 +414,9 @@ function handleCronogramaImportFile(file) {
       encontros.push({
         id: uidCrono(), semana: e.semana || null, dataSugerida: e.dataSugerida || null,
         lideranca: e.lideranca, area: e.area || "", prioridade: e.prioridade || "",
-        tipoEncontro: e.tipoEncontro || "", duracaoMin: e.duracaoMin || null,
-        status: e.status || "Pendente", dataRealizada: e.dataRealizada || null,
-        pauta: e.pauta || "", createdAt: now, updatedAt: now,
+        duracaoMin: e.duracaoMin || null, status: e.status || "Pendente",
+        dataRealizada: e.dataRealizada || null, proximaPrevista: e.proximaPrevista || null,
+        createdAt: now, updatedAt: now,
       });
       encontrosAdded++;
     });

@@ -632,8 +632,6 @@ select:focus, input:focus, textarea:focus { outline: 2px solid var(--primary); o
 .cronograma-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 .cronograma-table tr:last-child td { border-bottom: none; }
 .cronograma-table select, .cronograma-table input[type="date"] { font-size: .8rem; padding: 5px 8px; width: auto; }
-.cronograma-table input[type="text"].pauta-inline { font-size: .8rem; padding: 5px 8px; width: 160px; border: 1px solid transparent; background: transparent; }
-.cronograma-table input[type="text"].pauta-inline:hover, .cronograma-table input[type="text"].pauta-inline:focus { border-color: var(--border); background: var(--bg); }
 .cronograma-table input[type="number"].cadencia-inline, .cronograma-table input[type="number"].duracao-inline { font-size: .8rem; padding: 5px 6px; width: 64px; }
 .cronograma-row-delete { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: .85rem; padding: 4px 6px; border-radius: 6px; }
 .cronograma-row-delete:hover { background: var(--danger-soft); color: var(--danger); }

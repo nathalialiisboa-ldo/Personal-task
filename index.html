@@ -359,8 +359,7 @@
           <thead>
             <tr>
               <th>Data sugerida</th><th>Liderança</th><th>Área</th><th>Prioridade</th>
-              <th>Tipo</th><th>Duração</th><th>Status</th><th>Data realizada</th>
-              <th>Próxima prevista</th><th>Pauta</th><th></th>
+              <th>Duração</th><th>Status</th><th>Próxima prevista</th><th></th>
             </tr>
           </thead>
           <tbody id="cronogramaTableBody"></tbody>
@@ -563,13 +562,6 @@
         <input type="date" id="encontroDataSugeridaInput" />
       </div>
       <div class="field">
-        <label>Tipo de encontro</label>
-        <select id="encontroTipoInput">
-          <option value="Diagnóstico inicial">Diagnóstico inicial</option>
-          <option value="Alinhamento / follow-up">Alinhamento / follow-up</option>
-        </select>
-      </div>
-      <div class="field">
         <label>Status</label>
         <select id="encontroStatusInput">
           <option value="Pendente">Pendente</option>
@@ -580,13 +572,9 @@
         </select>
       </div>
       <div class="field">
-        <label>Data realizada</label>
-        <input type="date" id="encontroDataRealizadaInput" />
+        <label>Próxima prevista</label>
+        <input type="date" id="encontroProximaPrevistaInput" />
       </div>
-    </div>
-    <div class="field">
-      <label>Pauta / encaminhamentos</label>
-      <textarea id="encontroPautaInput" rows="3" placeholder="Opcional"></textarea>
     </div>
     <div class="modal-footer">
       <div class="spacer"></div>

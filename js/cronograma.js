@@ -11,7 +11,8 @@ const STATUS_CLASS_CRONO = {
   Cancelado: "st-cancelado",
 };
 
-let cronogramaFilters = { area: "", status: "" };
+let cronogramaEncontrosFilters = { area: "", status: "", prioridade: "", sort: "dataSugerida", dir: 1 };
+let cronogramaLiderancasFilters = { area: "", prioridade: "", situacao: "", sort: "nome", dir: 1 };
 let editingLiderancaId = null;
 let editingEncontroId = null;
 
@@ -79,18 +80,36 @@ function renderCronogramaStats() {
 }
 
 function populateCronogramaAreaFilter() {
-  const sel = document.getElementById("cronogramaFilterArea");
-  if (!sel) return;
-  const current = sel.value;
   const areasSet = new Set([
     ...loadLiderancas().map((l) => l.area).filter(Boolean),
     ...loadEncontros().map((e) => e.area).filter(Boolean),
   ]);
   const areasList = Array.from(areasSet).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  sel.innerHTML = '<option value="">Todas as áreas</option>' +
+  const options = '<option value="">Todas as áreas</option>' +
     areasList.map((a) => `<option value="${escapeHtmlCrono(a)}">${escapeHtmlCrono(a)}</option>`).join("");
-  if (areasList.includes(current)) sel.value = current;
-  else cronogramaFilters.area = "";
+
+  [
+    ["cronogramaFilterArea", cronogramaEncontrosFilters],
+    ["cronogramaFilterAreaLideranca", cronogramaLiderancasFilters],
+  ].forEach(([id, filters]) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = options;
+    if (areasList.includes(filters.area)) sel.value = filters.area;
+    else filters.area = "";
+  });
+}
+
+function sortByField(list, field, dir, getters) {
+  const get = getters[field] || ((x) => x[field]);
+  return [...list].sort((a, b) => {
+    const va = get(a), vb = get(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+    return String(va).localeCompare(String(vb), "pt-BR") * dir;
+  });
 }
 
 /* ---------- Tabela de encontros ---------- */
@@ -134,9 +153,12 @@ function renderCronogramaTable() {
   const tbody = document.getElementById("cronogramaTableBody");
   const empty = document.getElementById("cronogramaTableEmpty");
   if (!tbody) return;
-  let encontros = loadEncontros().sort((a, b) => (a.dataSugerida || "").localeCompare(b.dataSugerida || ""));
-  if (cronogramaFilters.area) encontros = encontros.filter((e) => e.area === cronogramaFilters.area);
-  if (cronogramaFilters.status) encontros = encontros.filter((e) => e.status === cronogramaFilters.status);
+  const f = cronogramaEncontrosFilters;
+  let encontros = loadEncontros();
+  if (f.area) encontros = encontros.filter((e) => e.area === f.area);
+  if (f.status) encontros = encontros.filter((e) => e.status === f.status);
+  if (f.prioridade) encontros = encontros.filter((e) => e.prioridade === f.prioridade);
+  encontros = sortByField(encontros, f.sort, f.dir, {});
 
   tbody.innerHTML = encontros.map(encontroRowHTML).join("");
   empty.classList.toggle("hidden", encontros.length > 0);
@@ -178,7 +200,7 @@ function renderCronogramaTable() {
 
 /* ---------- Tabela de lideranças ---------- */
 
-function liderancaRowHTML(l) {
+function computeLiderancaStats(l) {
   const encontrosDaLideranca = loadEncontros().filter((e) => normalizeCrono(e.lideranca) === normalizeCrono(l.nome));
   const previstas = encontrosDaLideranca.length;
   const realizadas = encontrosDaLideranca.filter((e) => e.status === "Realizado");
@@ -186,7 +208,11 @@ function liderancaRowHTML(l) {
   const proximaPrevista = ultimaRealizada && l.cadenciaDias ? addDaysISO(ultimaRealizada, l.cadenciaDias) : null;
   let situacao = "Sem 1:1 realizado";
   if (ultimaRealizada) situacao = proximaPrevista && proximaPrevista < todayISOCrono() ? "Cadência vencida" : "Em dia";
+  return { previstas, realizadasCount: realizadas.length, ultimaRealizada, proximaPrevista, situacao };
+}
 
+function liderancaRowHTML(l) {
+  const { previstas, realizadasCount, ultimaRealizada, proximaPrevista, situacao } = computeLiderancaStats(l);
   return `
   <tr data-id="${l.id}">
     <td>${escapeHtmlCrono(l.nome)}</td>
@@ -196,7 +222,7 @@ function liderancaRowHTML(l) {
     <td><input type="number" class="cadencia-inline crono-cadencia" min="1" value="${l.cadenciaDias || ""}" /></td>
     <td><input type="number" class="duracao-inline crono-duracao" min="5" step="5" value="${l.duracaoMin || ""}" /></td>
     <td>${previstas}</td>
-    <td>${realizadas.length}</td>
+    <td>${realizadasCount}</td>
     <td>${formatDateCrono(ultimaRealizada)}</td>
     <td>${formatDateCrono(proximaPrevista)}</td>
     <td>${escapeHtmlCrono(situacao)}</td>
@@ -217,8 +243,15 @@ function renderCronogramaLeadersTable() {
   const tbody = document.getElementById("cronogramaLeadersBody");
   const empty = document.getElementById("cronogramaLeadersEmpty");
   if (!tbody) return;
-  let liderancas = loadLiderancas().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  if (cronogramaFilters.area) liderancas = liderancas.filter((l) => l.area === cronogramaFilters.area);
+  const f = cronogramaLiderancasFilters;
+  let liderancas = loadLiderancas();
+  if (f.area) liderancas = liderancas.filter((l) => l.area === f.area);
+  if (f.prioridade) liderancas = liderancas.filter((l) => l.prioridade === f.prioridade);
+  if (f.situacao) liderancas = liderancas.filter((l) => computeLiderancaStats(l).situacao === f.situacao);
+  liderancas = sortByField(liderancas, f.sort, f.dir, {
+    situacao: (l) => computeLiderancaStats(l).situacao,
+    proximaPrevista: (l) => computeLiderancaStats(l).proximaPrevista,
+  });
 
   tbody.innerHTML = liderancas.map(liderancaRowHTML).join("");
   empty.classList.toggle("hidden", liderancas.length > 0);
@@ -428,13 +461,47 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("navCronograma").addEventListener("click", showCronogramaView);
 
   document.getElementById("cronogramaFilterArea").addEventListener("change", (e) => {
-    cronogramaFilters.area = e.target.value;
+    cronogramaEncontrosFilters.area = e.target.value;
     renderCronogramaTable();
-    renderCronogramaLeadersTable();
   });
   document.getElementById("cronogramaFilterStatus").addEventListener("change", (e) => {
-    cronogramaFilters.status = e.target.value;
+    cronogramaEncontrosFilters.status = e.target.value;
     renderCronogramaTable();
+  });
+  document.getElementById("cronogramaFilterPrioridade").addEventListener("change", (e) => {
+    cronogramaEncontrosFilters.prioridade = e.target.value;
+    renderCronogramaTable();
+  });
+  document.getElementById("cronogramaSortEncontros").addEventListener("change", (e) => {
+    cronogramaEncontrosFilters.sort = e.target.value;
+    renderCronogramaTable();
+  });
+  document.getElementById("cronogramaSortEncontrosDir").addEventListener("click", (e) => {
+    cronogramaEncontrosFilters.dir *= -1;
+    e.target.textContent = cronogramaEncontrosFilters.dir === 1 ? "⬆️" : "⬇️";
+    renderCronogramaTable();
+  });
+
+  document.getElementById("cronogramaFilterAreaLideranca").addEventListener("change", (e) => {
+    cronogramaLiderancasFilters.area = e.target.value;
+    renderCronogramaLeadersTable();
+  });
+  document.getElementById("cronogramaFilterPrioridadeLideranca").addEventListener("change", (e) => {
+    cronogramaLiderancasFilters.prioridade = e.target.value;
+    renderCronogramaLeadersTable();
+  });
+  document.getElementById("cronogramaFilterSituacao").addEventListener("change", (e) => {
+    cronogramaLiderancasFilters.situacao = e.target.value;
+    renderCronogramaLeadersTable();
+  });
+  document.getElementById("cronogramaSortLiderancas").addEventListener("change", (e) => {
+    cronogramaLiderancasFilters.sort = e.target.value;
+    renderCronogramaLeadersTable();
+  });
+  document.getElementById("cronogramaSortLiderancasDir").addEventListener("click", (e) => {
+    cronogramaLiderancasFilters.dir *= -1;
+    e.target.textContent = cronogramaLiderancasFilters.dir === 1 ? "⬆️" : "⬇️";
+    renderCronogramaLeadersTable();
   });
 
   document.getElementById("btnNewLideranca").addEventListener("click", () => openLiderancaModal(null));

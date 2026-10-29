@@ -337,6 +337,21 @@
           <option value="Reagendar">Reagendar</option>
           <option value="Cancelado">Cancelado</option>
         </select>
+        <select id="cronogramaFilterPrioridade">
+          <option value="">Todas as prioridades</option>
+          <option value="P1">P1</option>
+          <option value="P2">P2</option>
+          <option value="P3">P3</option>
+          <option value="Executivo">Executivo</option>
+        </select>
+        <select id="cronogramaSortEncontros">
+          <option value="dataSugerida">Ordenar por: Data sugerida</option>
+          <option value="lideranca">Ordenar por: Liderança</option>
+          <option value="area">Ordenar por: Área</option>
+          <option value="status">Ordenar por: Status</option>
+          <option value="prioridade">Ordenar por: Prioridade</option>
+        </select>
+        <button type="button" id="cronogramaSortEncontrosDir" class="btn btn-ghost btn-sm" title="Inverter ordem">⬆️</button>
       </div>
 
       <div class="cronograma-table-wrap">
@@ -354,6 +369,33 @@
       </div>
 
       <h3 class="cronograma-section-title">👤 Controle por liderança</h3>
+
+      <div class="cronograma-filters">
+        <select id="cronogramaFilterAreaLideranca"><option value="">Todas as áreas</option></select>
+        <select id="cronogramaFilterPrioridadeLideranca">
+          <option value="">Todas as prioridades</option>
+          <option value="P1">P1</option>
+          <option value="P2">P2</option>
+          <option value="P3">P3</option>
+          <option value="Executivo">Executivo</option>
+        </select>
+        <select id="cronogramaFilterSituacao">
+          <option value="">Todas as situações</option>
+          <option value="Em dia">Em dia</option>
+          <option value="Cadência vencida">Cadência vencida</option>
+          <option value="Sem 1:1 realizado">Sem 1:1 realizado</option>
+        </select>
+        <select id="cronogramaSortLiderancas">
+          <option value="nome">Ordenar por: Liderança</option>
+          <option value="area">Ordenar por: Área</option>
+          <option value="prioridade">Ordenar por: Prioridade</option>
+          <option value="cadenciaDias">Ordenar por: Cadência</option>
+          <option value="proximaPrevista">Ordenar por: Próxima prevista</option>
+          <option value="situacao">Ordenar por: Situação</option>
+        </select>
+        <button type="button" id="cronogramaSortLiderancasDir" class="btn btn-ghost btn-sm" title="Inverter ordem">⬆️</button>
+      </div>
+
       <div class="cronograma-table-wrap">
         <table class="cronograma-table" id="cronogramaLeadersTable">
           <thead>

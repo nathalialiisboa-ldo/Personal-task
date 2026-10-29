@@ -49,6 +49,8 @@ function selectArea(areaId) {
   const area = loadAreas().find((a) => a.id === areaId);
   if (!area) return;
   currentAreaId = areaId;
+  document.getElementById("cronogramaView").classList.add("hidden");
+  document.getElementById("navCronograma").classList.remove("active");
   document.getElementById("areasEmptyState").classList.add("hidden");
   document.getElementById("areaDetail").classList.remove("hidden");
   document.getElementById("areaTitle").textContent = area.name;

@@ -78,6 +78,7 @@
       if (view === "anotacoes" && typeof renderAnotacoesView === "function") renderAnotacoesView();
       if (view === "oneonones" && typeof mountOneOnOnes === "function") mountOneOnOnes(document.getElementById("view-oneonones"), null);
       if (view === "priorities" && typeof renderPrioritiesView === "function") renderPrioritiesView();
+      if (view === "cronograma" && typeof renderCronogramaView === "function") renderCronogramaView();
     });
   });
 

@@ -43,12 +43,13 @@
     <nav class="nav-views" id="spaceNav">
       <button class="nav-item" data-view="priorities">⭐ Prioridades do dia</button>
       <button class="nav-item active" data-view="board" data-space="todos">✅ To do's</button>
+      <button class="nav-item" data-view="cronograma">📆 Cronograma de 1:1s</button>
       <button class="nav-item" data-view="board" data-space="1on1" hidden>🗣️ 1:1 Yás</button>
       <div class="nav-group">
         <div class="nav-group-label">📦 Entregáveis</div>
         <button class="nav-item nav-subitem" data-view="notas">🎯 Notas H2</button>
       </div>
-      <button class="nav-item" data-view="board" data-space="extra">➕ Atividades Extra</button>
+      <button class="nav-item" data-view="board" data-space="extra" hidden>➕ Atividades Extra</button>
       <button class="nav-item" data-view="anotacoes">📝 Anotações</button>
       <button class="nav-item" data-view="oneonones">🤝 1:1s</button>
       <button class="nav-item" data-view="dashboard">📊 Métricas</button>
@@ -296,26 +297,8 @@
       </div>
     </section>
 
-  </main>
-</div>
-
-<!-- ÁREAS DE ATENDIMENTO MODULE -->
-<div class="app hidden" id="areasApp">
-  <aside class="sidebar">
-    <button id="btnNewArea" class="btn btn-primary btn-block">+ Nova área</button>
-    <label for="areaOrgGlobalImportFile" class="btn btn-ghost btn-block" title="Atualiza o organograma de todas as áreas de uma vez, a partir de um único arquivo">📥 Atualizar organogramas</label>
-    <input type="file" id="areaOrgGlobalImportFile" accept=".csv" hidden />
-    <button type="button" id="navCronograma" class="btn btn-ghost btn-block">📆 Cronograma de 1:1s</button>
-    <nav class="nav-views" id="areasNav"></nav>
-  </aside>
-
-  <main class="main">
-    <div id="areasEmptyState" class="empty-state">
-      <p>Nenhuma área cadastrada ainda. Clique em "+ Nova área" para começar a registrar as áreas que você atende.</p>
-    </div>
-
     <!-- CRONOGRAMA DE 1:1s VIEW -->
-    <section id="cronogramaView" class="hidden">
+    <section id="view-cronograma" class="view">
       <header class="topbar">
         <h2>📆 Cronograma de 1:1s</h2>
         <div class="spacer"></div>
@@ -409,6 +392,23 @@
         <div id="cronogramaLeadersEmpty" class="theme-empty hidden">Nenhuma liderança cadastrada ainda.</div>
       </div>
     </section>
+
+  </main>
+</div>
+
+<!-- ÁREAS DE ATENDIMENTO MODULE -->
+<div class="app hidden" id="areasApp">
+  <aside class="sidebar">
+    <button id="btnNewArea" class="btn btn-primary btn-block">+ Nova área</button>
+    <label for="areaOrgGlobalImportFile" class="btn btn-ghost btn-block" title="Atualiza o organograma de todas as áreas de uma vez, a partir de um único arquivo">📥 Atualizar organogramas</label>
+    <input type="file" id="areaOrgGlobalImportFile" accept=".csv" hidden />
+    <nav class="nav-views" id="areasNav"></nav>
+  </aside>
+
+  <main class="main">
+    <div id="areasEmptyState" class="empty-state">
+      <p>Nenhuma área cadastrada ainda. Clique em "+ Nova área" para começar a registrar as áreas que você atende.</p>
+    </div>
 
     <section id="areaDetail" class="hidden">
       <header class="topbar">

@@ -435,22 +435,8 @@ function handleCronogramaImportFile(file) {
   reader.readAsText(file, "UTF-8");
 }
 
-/* ---------- Navegação / visibilidade ---------- */
-
-function showCronogramaView() {
-  document.getElementById("areasEmptyState").classList.add("hidden");
-  document.getElementById("areaDetail").classList.add("hidden");
-  document.getElementById("cronogramaView").classList.remove("hidden");
-  document.getElementById("navCronograma").classList.add("active");
-  document.querySelectorAll("#areasNav .nav-item").forEach((btn) => btn.classList.remove("active"));
-  renderCronogramaView();
-}
-
 document.addEventListener("DOMContentLoaded", () => {
-  const areasApp = document.getElementById("areasApp");
-  if (!areasApp) return;
-
-  document.getElementById("navCronograma").addEventListener("click", showCronogramaView);
+  if (!document.getElementById("cronogramaFilterArea")) return;
 
   document.getElementById("cronogramaFilterArea").addEventListener("change", (e) => {
     cronogramaEncontrosFilters.area = e.target.value;
